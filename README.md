@@ -305,6 +305,42 @@ Path: `templates/BATCH.md`
 
 Persist an issue orchestration graph, execution waves, gates, and orchestrator prompt.
 
+# Project instructions
+
+Reusable presets for long-running ChatGPT Projects or other AI workspaces with multiple chats.
+
+Project instructions define how an entire project behaves. Individual chats may have different purposes and should use only the relevant parts.
+
+## `resume-reviews`
+
+Path: `project-instructions/resume-reviews.md`
+
+For technical resume review, tailoring, Resume Bank usage, recruiter signal, and truthful positioning.
+
+## `learning-coach`
+
+Path: `project-instructions/learning-coach.md`
+
+For roadmap-driven technical learning with interactive teaching, implementation, debugging, retrieval practice, and mastery checks.
+
+## `interview-prep`
+
+Path: `project-instructions/interview-prep.md`
+
+For coding interviews, DSA, system design, behavioral preparation, mocks, and weakness tracking.
+
+## `software-engineering-project`
+
+Path: `project-instructions/software-engineering-project.md`
+
+For multi-chat software projects covering product thinking, brainstorming, research, decisions, architecture, implementation, UI, database work, and review.
+
+## `course-companion`
+
+Path: `project-instructions/course-companion.md`
+
+For academic courses where syllabus, slides, assignments, and professor-provided material define the primary learning context.
+
 # Registry
 
 `registry.yaml` tracks adoption status and provenance.
@@ -325,6 +361,7 @@ A workflow being present in this repository does not automatically make it part 
 - `agents/` — specialized roles
 - `rules/` — stable engineering constraints
 - `templates/` — reusable artifact structures
+- `project-instructions/` — reusable multi-chat project behavior
 - `registry.yaml` — adoption status and provenance
 - `AGENTS.md` — instructions for agents working inside this repository
 

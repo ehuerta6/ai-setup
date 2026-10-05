@@ -86,3 +86,24 @@ agents:
     status: testing
     source: user issue orchestration workflow
 
+project_instructions:
+  resume-reviews:
+    status: testing
+    source: user Resume Reviews project
+
+  learning-coach:
+    status: testing
+    source: user learning workflow
+
+  interview-prep:
+    status: testing
+    source: user-approved project preset
+
+  software-engineering-project:
+    status: testing
+    source: user-approved project preset
+
+  course-companion:
+    status: testing
+    source: user-approved project preset
+
