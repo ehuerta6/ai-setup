@@ -21,6 +21,7 @@ Each skill has one clear responsibility. Its detailed behavior lives in its own 
 | `review-pr` | Reviewing implementation against requirements and engineering standards |
 | `debug-with-evidence` | Diagnosing bugs through reproduction and tested hypotheses |
 | `github-flow` | Working with commits, issues, PRs, and GitHub conventions |
+| `firebase` | Working with Firebase Auth, Firestore, Security Rules, Emulator Suite, Functions, and related services |
 
 ## Agent workflow
 
@@ -37,6 +38,12 @@ Each skill has one clear responsibility. Its detailed behavior lives in its own 
 | `humanizer` | Removing AI-writing patterns while preserving meaning and facts |
 | `unslop` | Auditing and cleaning technical writing |
 | `impeccable` | Designing, reviewing, or improving frontend UI and UX |
+
+## Career
+
+| Skill | Use when |
+| --- | --- |
+| `resume-review` | Reviewing, roasting, rewriting, or tailoring a technical resume |
 
 ## Typical flow
 

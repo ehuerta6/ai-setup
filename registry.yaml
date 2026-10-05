@@ -57,6 +57,14 @@ skills:
     status: testing
     source: pbakaus/impeccable
 
+  firebase:
+    status: testing
+    source: firebase official docs
+
+  resume-review:
+    status: testing
+    source: resume-reviews project instructions
+
 agents:
   pr-reviewer:
     status: testing
