@@ -21,6 +21,7 @@ Each skill has one clear responsibility. Its detailed behavior lives in its own 
 | `review-pr` | Reviewing implementation against requirements and engineering standards |
 | `debug-with-evidence` | Diagnosing bugs through reproduction and tested hypotheses |
 | `github-flow` | Working with commits, issues, PRs, and GitHub conventions |
+| `issue-batch-orchestrator` | Coordinating multiple GitHub Issues into safe execution waves |
 | `firebase` | Working with Firebase Auth, Firestore, Security Rules, Emulator Suite, Functions, and related services |
 
 ## Agent workflow

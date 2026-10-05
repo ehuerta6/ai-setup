@@ -65,6 +65,10 @@ skills:
     status: testing
     source: resume-reviews project instructions
 
+  issue-batch-orchestrator:
+    status: testing
+    source: user issue orchestration workflow
+
 agents:
   pr-reviewer:
     status: testing
@@ -77,3 +81,8 @@ agents:
   supabase-database-reviewer:
     status: testing
     source: cappy-hub
+
+  batch-orchestrator:
+    status: testing
+    source: user issue orchestration workflow
+
