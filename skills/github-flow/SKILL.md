@@ -1,6 +1,6 @@
 ---
 name: github-flow
-description: Apply the shared Git and GitHub conventions for commits, issues, pull requests, merging, and repository hygiene.
+description: Execute Git and GitHub operations using the repository's documented conventions for commits, issues, pull requests, and merging.
 metadata:
   adapted_from:
     - cappycode git conventions
@@ -9,140 +9,76 @@ metadata:
 
 # GitHub flow
 
-Use the repository's own documented Git conventions when they exist.
+Use this skill when performing Git or GitHub workflow operations.
 
-These rules provide the default when the project does not specify otherwise.
+The stable conventions live in `rules/github.md`.
 
-## Scope
+Read that file first.
 
-This skill covers:
+Project-specific Git instructions override the global rule.
 
-- Git branches;
-- commits;
-- GitHub Issues;
-- pull requests;
-- merge preparation;
-- repository hygiene.
+## Process
 
-## Repository-specific overrides
+### 1. Inspect repository conventions
 
-Project instructions may intentionally override these defaults.
+Before acting, determine:
 
-For example, a personal configuration repository may explicitly allow direct work on `main`.
+- target branch;
+- whether direct work on the target branch is allowed;
+- branch naming requirements;
+- commit conventions;
+- required checks;
+- PR requirements;
+- merge strategy.
 
-Honor the project's explicit workflow instead of forcing this skill's defaults.
+Do not assume every repository uses the same flow.
 
-## Branches
+### 2. Prepare the change
 
-For normal collaborative project development:
+Follow the repository's configured workflow.
 
-- do not work directly on `main`;
-- start from the latest `main`;
-- use short-lived branches;
-- keep each branch focused on one logical change.
+Keep the change focused on one logical unit.
 
-Recommended prefixes:
+When using a branch, start from the latest intended base.
 
-- `feat/`
-- `fix/`
-- `docs/`
-- `refactor/`
-- `chore/`
-- `ci/`
+### 3. Commit
 
-Use short descriptive names.
+Use the repository's commit convention.
 
-## Commits
+When none exists, follow `rules/github.md`.
 
-Use Conventional Commit-style messages.
+Before committing:
 
-Examples:
-
-- `feat: add session reveal controls`
-- `fix: prevent duplicate live sessions`
-- `docs: clarify local database workflow`
-- `refactor: simplify session state handling`
-- `chore: update development tooling`
-
-A commit should represent one coherent change.
-
-Do not mix unrelated edits into the same commit.
-
-## Issues
-
-Read the complete issue before implementation.
-
-Treat acceptance criteria and explicit scope as constraints.
-
-Do not silently expand scope.
-
-When implementation reveals additional work, surface it separately instead of smuggling it into the current issue.
-
-## Pull requests
-
-Keep one logical change per PR.
-
-A PR should explain:
-
-## Summary
-
-What problem the change addresses and what changed.
-
-## Verification
-
-What was actually run or manually verified.
-
-## Decisions
-
-Only include material implementation decisions or limitations that reviewers need to know.
-
-Do not repeat the entire issue.
-
-When implementing an issue, link it with:
-
-`Closes #<issue-number>`
-
-Use a Conventional Commit-style PR title.
-
-## Before opening a PR
-
-- update from the latest target branch;
-- inspect the complete diff;
-- remove debug code and accidental files;
-- run relevant configured checks;
-- verify acceptance criteria;
+- inspect staged changes;
+- remove accidental files;
 - confirm no secrets are included.
 
-Never claim a check passed unless it was actually run.
+### 4. Prepare the PR
 
-## Merge
+When a PR is part of the repository workflow:
 
-Default collaborative workflow:
+- inspect the complete diff;
+- verify acceptance criteria;
+- run relevant checks;
+- use `templates/PULL_REQUEST.md` when applicable;
+- link the implementation issue.
 
-- prefer Squash and Merge;
-- use the PR title as the squash commit message;
-- delete the feature branch after merge.
+Only report checks that actually ran.
 
-Do not merge unless the user explicitly requests it or the project's workflow explicitly grants that authority.
+### 5. Merge
 
-## Repository hygiene
+Use the repository's configured merge strategy.
 
-Do not commit:
+Do not merge unless the user or repository workflow grants that authority.
 
-- secrets;
-- API keys;
-- passwords;
-- private keys;
-- local environment files;
-- accidental generated artifacts;
-- unrelated editor files.
+Clean up temporary branches when appropriate.
 
-Respect the repository's `.gitignore`.
+## Completion
 
-## Rules
+GitHub workflow work is complete when:
 
-- Explicit project Git rules override these defaults.
-- Keep changes focused.
-- Preserve traceability from issue to implementation to PR.
-- Do not hide failing checks.
-- Do not rewrite shared history unless explicitly required and safe.
+- the change is in the correct place;
+- commit history follows project conventions;
+- verification claims are accurate;
+- issue and PR relationships are preserved;
+- no unintended files or secrets were included.

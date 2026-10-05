@@ -1,0 +1,71 @@
+version: 0.1.0
+
+skills:
+  grill-me:
+    status: testing
+    source: mattpocock/skills
+
+  to-spec:
+    status: testing
+    source: mattpocock/skills
+
+  to-issues:
+    status: testing
+    source: mattpocock/skills
+
+  implement-issue:
+    status: testing
+    source: cappy-hub + cappycode
+
+  verify-change:
+    status: testing
+    source: cappy-hub
+
+  review-pr:
+    status: testing
+    source: cappy-hub + cappycode + mattpocock/skills
+
+  debug-with-evidence:
+    status: testing
+    source: cappy-hub + mattpocock/skills
+
+  github-flow:
+    status: testing
+    source: cappy-hub + cappycode
+
+  handoff:
+    status: testing
+    source: mattpocock/skills
+
+  retro:
+    status: testing
+    source: mattpocock/skills
+
+  writing-for-agents:
+    status: testing
+    source: mattpocock/skills
+
+  humanizer:
+    status: testing
+    source: blader/humanizer
+
+  unslop:
+    status: testing
+    source: cursor/plugins + theclaymethod/unslop
+
+  impeccable:
+    status: testing
+    source: pbakaus/impeccable
+
+agents:
+  pr-reviewer:
+    status: testing
+    source: cappy-hub
+
+  mentor:
+    status: testing
+    source: cappy-hub project workflow
+
+  supabase-database-reviewer:
+    status: testing
+    source: cappy-hub
