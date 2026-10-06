@@ -7,6 +7,41 @@ description: Design or evolve reusable AI configuration such as skills, agents, 
 
 Use this skill when creating or changing reusable AI configuration.
 
+## Modes
+
+Choose the mode that matches the project's current state.
+
+### Bootstrap
+
+Use when the project is still an idea or important product and technical decisions are unresolved.
+
+Select only the minimum configuration needed for discovery.
+
+Do not recommend stack-specific or workflow-specific configuration before decisions justify it.
+
+### Adopt
+
+Use when the project is defined or already exists.
+
+Inspect the actual project and classify relevant configuration as:
+
+- ADD
+- KEEP EXISTING
+- REPLACE
+- SKIP
+
+Project-specific behavior takes priority over reusable defaults.
+
+### Build
+
+Use when creating or extending a skill, agent, rule, template, or Project Instruction.
+
+First decide whether to:
+
+- CREATE
+- EXTEND EXISTING
+- DON'T CREATE
+
 ## First decide what is needed
 
 Inspect:

@@ -57,6 +57,14 @@ Verify that they:
 
 Delete tests that add maintenance cost without useful protection.
 
+## Editing boundaries
+
+The test engineer may add or modify test code.
+
+Do not change production behavior merely to make a test pass.
+
+If production code appears incorrect or requires restructuring outside the testing scope, report the finding and hand it back to the implementer.
+
 ## Boundaries
 
 Do not rewrite production architecture merely to make testing convenient unless the existing design itself is the problem.

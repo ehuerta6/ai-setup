@@ -2,7 +2,7 @@
 
 Canonical reusable configuration for AI-assisted software engineering.
 
-This repository contains reusable skills, agents, engineering rules, and templates that can be selectively copied into individual projects.
+This repository contains reusable skills, agents, engineering rules, templates, and Project Instructions that can be selectively adopted by individual projects.
 
 Project-specific requirements, architecture, product behavior, and technical decisions stay inside each project repository.
 
@@ -14,7 +14,7 @@ When applying this setup to another project:
 
 1. Inspect that project's existing AI instructions, architecture, stack, Git workflow, and conventions.
 2. Read this README as the catalog of available reusable configuration.
-3. Select only the skills, agents, rules, and templates that actually apply.
+3. Select only the skills, agents, rules, templates, and Project Instructions that actually apply.
 4. Prefer existing project-specific instructions when they contain intentional product or architecture behavior.
 5. Copy the exact canonical files from this repository instead of recreating them from the descriptions below.
 6. Do not copy everything by default.
@@ -335,6 +335,12 @@ Path: `templates/BATCH.md`
 
 Persist an issue orchestration graph, execution waves, gates, and orchestrator prompt.
 
+## `DECISION`
+
+Path: `templates/DECISION.md`
+
+Lightweight record for important durable decisions and their rationale.
+
 # Project instructions
 
 Reusable presets for long-running ChatGPT Projects or other AI workspaces with multiple chats.
@@ -376,12 +382,6 @@ For academic courses where syllabus, slides, assignments, and professor-provided
 Path: `project-instructions/project-base.md`
 
 Universal starting point when no specialized Project Instruction preset fits.
-
-## `DECISION`
-
-Path: `templates/DECISION.md`
-
-Lightweight record for important durable decisions and their rationale.
 
 # Registry
 

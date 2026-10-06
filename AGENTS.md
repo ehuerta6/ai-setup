@@ -29,18 +29,7 @@ Load applicable stable rules from `rules/`:
 
 Use `README.md` as the catalog for available configuration and `WORKFLOWS.md` to choose the appropriate workflow for the current scenario.
 
-Common flow:
-
-```text
-grill-me
-→ to-spec
-→ to-issues
-→ implement-issue
-→ verify-change
-→ review-pr
-```
-
-Supporting skills should be loaded only when relevant.
+Load only the configuration relevant to the current task.
 
 ## Agents
 
