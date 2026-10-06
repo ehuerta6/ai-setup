@@ -6,6 +6,8 @@ This repository contains reusable skills, agents, engineering rules, and templat
 
 Project-specific requirements, architecture, product behavior, and technical decisions stay inside each project repository.
 
+For practical setup and usage workflows, see `HOW_TO_USE.md`.
+
 ## How to use this repository
 
 When applying this setup to another project:
