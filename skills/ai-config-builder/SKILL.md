@@ -13,9 +13,11 @@ Choose the mode that matches the project's current state.
 
 ### Bootstrap
 
-Use when the project is still an idea or important product and technical decisions are unresolved.
+Use when a new or empty project needs the minimum AI configuration required to begin working safely.
 
-Select only the minimum configuration needed for discovery.
+Select only immediately useful configuration.
+
+Do not use Bootstrap to discover the product itself. Use `grill-me` when product or technical decisions are unresolved.
 
 Do not recommend stack-specific or workflow-specific configuration before decisions justify it.
 

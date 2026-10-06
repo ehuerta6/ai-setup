@@ -4,7 +4,7 @@ Scenario-based guide for using `ai-setup`.
 
 These are recommended routes, not mandatory pipelines.
 
-Use only the steps that provide value for the current task.
+Use the smallest workflow that fits the current task.
 
 ## Router
 
@@ -14,16 +14,22 @@ Only have an idea?
 Know what to build but have not started?
 → New project
 
-Already have a project?
-→ Existing project adoption
+Have an empty repo that needs minimal AI configuration?
+→ Bootstrap
 
-Project already uses ai-setup?
+Already have a defined or existing project?
+→ Project adoption
+
+Project already uses AI configuration?
 → Project audit
 
-Working on one feature?
-→ Feature workflow
+Working from a spec?
+→ Spec workflow
 
-Working on several issues?
+Working from one issue?
+→ Issue workflow
+
+Working on several related issues?
 → Batch workflow
 
 Found a bug?
@@ -32,90 +38,103 @@ Found a bug?
 Need better tests?
 → Testing workflow
 
-Need new AI configuration?
+Need independent review?
+→ Review workflow
+
+Need Git or GitHub delivery?
+→ GitHub workflow
+
+Starting a ChatGPT or Claude Project?
+→ AI workspace workflow
+
+Moving work to another chat or agent?
+→ Handoff
+
+Need new reusable AI configuration?
 → AI config workflow
+
+Want to improve the workflow itself?
+→ Retro
+
 
 ## Only an idea
 
-Use when the idea is still abstract and product or technical decisions are unresolved.
-
-Example:
-
-"Build an e-commerce site."
+Use when the product or technical direction is still unclear.
 
 Flow:
 
-project-base
-→ ai-config-builder bootstrap
-→ grill-me
-→ clarify product and constraints
+grill-me
 → to-spec
-→ make technical decisions
-→ ai-config-builder adopt
+→ ai-config-builder adopt when the project is defined
+→ to-issues when implementation is ready
 
 Do not select stack-specific configuration before decisions justify it.
 
-Avoid choosing databases, frameworks, deployment platforms, or specialized agents merely because they may become useful later.
 
 ## Product defined, project not started
 
-Use when the desired product is clear but implementation has not begun.
+Use when the desired product is understood but implementation has not begun.
 
 Flow:
 
-project-base or a specialized Project Instruction
-→ grill-me for remaining ambiguity
+grill-me when meaningful ambiguity remains
 → to-spec
-→ spec-reviewer
-→ technical direction
+→ spec-reviewer when useful
 → ai-config-builder adopt
 → to-issues
-→ implementation
+
+
+## Empty repo needs minimal AI setup
+
+Use when the project or repository is new and needs only enough AI configuration to start working safely.
+
+Flow:
+
+ai-config-builder bootstrap
+
+Bootstrap should recommend only the minimum useful starting configuration.
+
+Do not use Bootstrap to discover what product should be built.
+
 
 ## Existing project adoption
 
-Use for repositories such as CappyCode or CappyHub.
+Use when the project already has meaningful product, architecture, or code context.
 
-Give the AI:
+Flow:
 
-- the project;
-- `README.md`;
-- this file;
-- existing project instructions.
+ai-config-builder adopt
 
-Ask it to inspect the project and classify reusable configuration as:
+Classify relevant reusable configuration as:
 
-- ADD;
-- KEEP EXISTING;
-- REPLACE;
-- SKIP.
+- ADD
+- KEEP EXISTING
+- REPLACE
+- SKIP
 
-Do not copy everything.
+Project-specific behavior and architecture take priority over reusable defaults.
 
-Project-specific product behavior and architecture take priority.
-
-Copy canonical files rather than recreating them from README descriptions.
 
 ## Existing project maintenance
 
-Use:
+Use when a project already has AI configuration and it may have drifted.
 
-`project-audit`
+Flow:
 
-Review current configuration for:
+project-audit
 
-- drift;
+Audit for:
+
+- stale configuration;
 - duplication;
-- stale instructions;
-- missing configuration;
-- project behavior that should remain local;
-- reusable improvements that should move to ai-setup.
+- conflicts;
+- missing reusable configuration;
+- reusable behavior that belongs in ai-setup.
 
-Approve changes before applying them.
 
 ## New ChatGPT or Claude Project
 
-If a matching preset exists, start from it.
+Use a specialized Project Instruction preset when one clearly fits.
 
 Available presets include:
 
@@ -125,17 +144,19 @@ Available presets include:
 - software-engineering-project;
 - course-companion.
 
-If no preset fits:
+If no specialized preset fits, start from:
 
-start from `project-base`.
+project-base
 
-Customize the preset using actual project context.
+Then:
 
-Do not blindly append it to existing instructions.
+preset or project-base
+→ tune using current sources, context, and handoff when available
+→ remove irrelevant generic behavior
+→ produce final Project Instructions
 
-Merge and remove duplication.
+Do not blindly paste the reusable preset as the final instructions.
 
-For ChatGPT Project Instructions, keep the final customized instructions under the platform limit.
 
 ## Feature is still unclear
 
@@ -143,97 +164,116 @@ Flow:
 
 grill-me
 → to-spec
-→ spec-reviewer
+→ spec-reviewer when useful
 → to-issues
 
-Skip steps when the requirement is already sufficiently defined.
 
 ## Feature already has an approved spec
 
 Flow:
 
-spec-reviewer
+spec-reviewer when useful
 → to-issues
 → implement-issue
-→ test-engineer when useful
-→ verify-change
-→ review-pr
+
 
 ## One approved issue
 
 Flow:
 
 implement-issue
-→ test-engineer when behavior needs protection
-→ verify-change
-→ review-pr
+→ pr-reviewer when independent review is useful
+
+`implement-issue` already handles implementation, appropriate tests, verification, and delivery preparation.
+
 
 ## Several related issues
 
 Flow:
 
 issue-batch-orchestrator
-→ execution waves
 → batch-orchestrator
-→ implementers
-→ test-engineer where valuable
-→ independent review
-→ merge gates
 
-Optimize for maximum safe parallelism.
+The planning skill determines dependencies, waves, and gates.
 
-Dependent work starts after prerequisites merge.
+The agent executes the approved plan and coordinates implementation and independent review.
+
 
 ## Bug
 
 Flow:
 
 debug-with-evidence
-→ identify root cause
-→ add a regression test when valuable
-→ smallest correct fix
-→ verify-change
+→ pr-reviewer when independent review is useful
 
-Do not change several unrelated things until the bug disappears.
+`debug-with-evidence` owns reproduction, diagnosis, root-cause fixing, regression protection, and verification.
+
 
 ## Testing
 
-Use `test-engineer` when test quality or missing protection is the problem.
+Use when test quality or missing protection is the problem.
 
-Prioritize:
+Flow:
 
-- business rules;
-- invariants;
-- critical flows;
-- security boundaries;
-- data integrity;
-- important regressions.
+test-engineer
+→ verify-change
 
-Use coverage as diagnostic evidence, not a goal.
+Prioritize meaningful fault detection over test count or arbitrary coverage targets.
 
-Use property-based testing when meaningful invariants exist.
+Use property-based or mutation testing only when they provide useful signal.
 
-Use mutation testing selectively when it helps evaluate whether important tests actually detect faults.
 
-Then use `verify-change` for final execution and reporting.
+## Independent review
+
+Use when separating implementation and review context improves confidence.
+
+Flow:
+
+pr-reviewer
+
+The PR reviewer uses `review-pr` to evaluate both:
+
+- requirements;
+- engineering quality.
+
+
+## Git and GitHub delivery
+
+Use when the main task is branch, commit, PR, or merge workflow.
+
+Flow:
+
+github-flow
+
+Project-specific Git rules override reusable defaults.
+
+
+## Continue work elsewhere
+
+Use when transferring unfinished work to another chat, session, or agent.
+
+Flow:
+
+handoff
+
+Prefer pointers to canonical artifacts instead of duplicating their full contents.
+
 
 ## Need new AI configuration
 
 Use:
 
-`ai-config-builder`
+ai-config-builder build
 
 Flow:
 
-inspect existing catalog
+inspect existing configuration
 → CREATE / EXTEND EXISTING / DON'T CREATE
-→ choose artifact type
-→ define responsibility and boundaries
 → create compact configuration
 → registry status: testing
 → test on a real task
 
-Artifact types:
+Possible artifact types:
 
 - skill;
 - agent;
@@ -241,31 +281,46 @@ Artifact types:
 - template;
 - Project Instruction.
 
+
 ## Workflow improvement
 
-After meaningful use:
+After meaningful real-world usage:
 
 retro
-→ identify what worked or failed
-→ project-specific lesson?
-   → keep it in the project
-→ reusable lesson?
-   → consider improving ai-setup
+
+Use evidence from actual work to decide whether something should:
+
+- stay project-specific;
+- change in ai-setup;
+- become automated;
+- remain unchanged.
 
 Testing a workflow does not make it accepted or default.
+
 
 ## Durable decision
 
 When a technical or product decision should remain understandable later, use:
 
-`templates/DECISION.md`
+templates/DECISION.md
 
 Do not create decision records for trivial choices.
 
+
 ## Core principle
 
-Start from the project's actual state.
+WORKFLOWS chooses the right tool.
 
-Do not install configuration merely because it exists.
+Skills define procedures.
 
-Use the minimum reusable configuration that materially improves the workflow.
+Agents isolate responsibilities.
+
+Rules define stable constraints.
+
+Project Instructions define long-running workspace behavior.
+
+Templates define reusable artifact shapes.
+
+Do not repeat a skill's internal procedure here.
+
+Use the minimum reusable configuration that materially improves the work.
