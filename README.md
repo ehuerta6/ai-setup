@@ -43,7 +43,9 @@ Issues
 
 Supporting skills are used only when relevant.
 
-# New reusable workflow tools
+# Skills
+
+## Configuration
 
 ### `ai-config-builder`
 
@@ -56,8 +58,6 @@ Design or evolve skills, agents, rules, templates, and Project Instructions with
 Path: `skills/project-audit/SKILL.md`
 
 Audit existing project AI configuration for drift, duplication, stale instructions, and missing reusable configuration.
-
-# Skills
 
 ## Planning
 

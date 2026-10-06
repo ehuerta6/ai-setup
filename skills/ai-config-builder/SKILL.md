@@ -36,20 +36,13 @@ Project-specific behavior takes priority over reusable defaults.
 
 Use when creating or extending a skill, agent, rule, template, or Project Instruction.
 
-First decide whether to:
-
-- CREATE
-- EXTEND EXISTING
-- DON'T CREATE
-
-## First decide what is needed
-
 Inspect:
+
 - `README.md`;
 - related existing configuration;
 - the target project's context.
 
-Choose one:
+Then choose:
 
 - CREATE
 - EXTEND EXISTING
