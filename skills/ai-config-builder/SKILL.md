@@ -109,9 +109,31 @@ Do not mark it accepted or default without explicit user confirmation and real u
 
 ## Return
 
+Match the output to the selected mode.
+
+### Bootstrap
+
 Provide:
 
-- recommendation: CREATE / EXTEND EXISTING / DON'T CREATE;
+- minimum starting configuration;
+- why each item is needed now;
+- decisions intentionally deferred until the project is clearer;
+- next discovery step.
+
+### Adopt
+
+For each relevant item provide:
+
+- ADD / KEEP EXISTING / REPLACE / SKIP;
+- why it applies;
+- overlap with existing project behavior;
+- where it should live.
+
+### Build
+
+Provide:
+
+- CREATE / EXTEND EXISTING / DON'T CREATE;
 - artifact type and name;
 - overlap with existing configuration;
 - proposed file location;

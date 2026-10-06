@@ -22,27 +22,6 @@ When applying this setup to another project:
 
 Before modifying the target project, present the proposed files to add, keep, replace, or skip.
 
-## Typical development flow
-
-Idea
-→ `grill-me`
-→ `to-spec`
-→ `to-issues`
-→ `implement-issue`
-→ `verify-change`
-→ `review-pr`
-
-For batches of related issues:
-
-Issues
-→ `issue-batch-orchestrator`
-→ `batch-orchestrator`
-→ implementation agents
-→ independent review
-→ merge gates
-
-Supporting skills are used only when relevant.
-
 # Skills
 
 ## Configuration
