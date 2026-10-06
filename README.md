@@ -6,7 +6,7 @@ This repository contains reusable skills, agents, engineering rules, and templat
 
 Project-specific requirements, architecture, product behavior, and technical decisions stay inside each project repository.
 
-For practical setup and usage workflows, see `HOW_TO_USE.md`.
+For scenario-based usage workflows, see `WORKFLOWS.md`.
 
 ## How to use this repository
 
@@ -42,6 +42,20 @@ Issues
 → merge gates
 
 Supporting skills are used only when relevant.
+
+# New reusable workflow tools
+
+### `ai-config-builder`
+
+Path: `skills/ai-config-builder/SKILL.md`
+
+Design or evolve skills, agents, rules, templates, and Project Instructions without unnecessary duplication.
+
+### `project-audit`
+
+Path: `skills/project-audit/SKILL.md`
+
+Audit existing project AI configuration for drift, duplication, stale instructions, and missing reusable configuration.
 
 # Skills
 
@@ -215,6 +229,20 @@ Execute an approved multi-issue execution plan.
 
 Coordinates implementation agents, independent reviewers, merge gates, and dependent waves.
 
+## Additional agents
+
+### `spec-reviewer`
+
+Path: `agents/spec-reviewer.md`
+
+Independently review a specification before implementation.
+
+### `test-engineer`
+
+Path: `agents/test-engineer.md`
+
+Design high-value tests around meaningful behavior, regressions, invariants, and critical flows.
+
 # Rules
 
 Rules contain stable engineering constraints.
@@ -343,6 +371,18 @@ Path: `project-instructions/course-companion.md`
 
 For academic courses where syllabus, slides, assignments, and professor-provided material define the primary learning context.
 
+## `project-base`
+
+Path: `project-instructions/project-base.md`
+
+Universal starting point when no specialized Project Instruction preset fits.
+
+## `DECISION`
+
+Path: `templates/DECISION.md`
+
+Lightweight record for important durable decisions and their rationale.
+
 # Registry
 
 `registry.yaml` tracks adoption status and provenance.
@@ -366,6 +406,7 @@ A workflow being present in this repository does not automatically make it part 
 - `project-instructions/` — reusable multi-chat project behavior
 - `registry.yaml` — adoption status and provenance
 - `AGENTS.md` — instructions for agents working inside this repository
+- `WORKFLOWS.md` — scenario-based guide for choosing workflows
 
 # Principles
 

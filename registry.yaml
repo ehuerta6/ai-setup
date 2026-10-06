@@ -69,6 +69,14 @@ skills:
     status: testing
     source: user issue orchestration workflow
 
+  ai-config-builder:
+    status: testing
+    source: user-approved ai-setup workflow
+
+  project-audit:
+    status: testing
+    source: user-approved ai-setup workflow
+
 agents:
   pr-reviewer:
     status: testing
@@ -86,7 +94,19 @@ agents:
     status: testing
     source: user issue orchestration workflow
 
+  spec-reviewer:
+    status: testing
+    source: user-approved ai-setup workflow
+
+  test-engineer:
+    status: testing
+    source: testing research + user-approved workflow
+
 project_instructions:
+  project-base:
+    status: testing
+    source: user-approved universal project preset
+
   resume-reviews:
     status: testing
     source: user Resume Reviews project

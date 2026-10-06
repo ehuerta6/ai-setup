@@ -27,7 +27,7 @@ Load applicable stable rules from `rules/`:
 
 ## Skills
 
-Use `README.md` as the catalog for available skills, agents, rules, and templates.
+Use `README.md` as the catalog for available configuration and `WORKFLOWS.md` to choose the appropriate workflow for the current scenario.
 
 Common flow:
 
