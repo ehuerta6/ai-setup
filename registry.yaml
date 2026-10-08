@@ -77,6 +77,10 @@ skills:
     status: testing
     source: user-approved ai-setup workflow
 
+  research-and-compare:
+    status: testing
+    source: user-approved ai-setup workflow
+
 agents:
   pr-reviewer:
     status: testing
@@ -127,3 +131,6 @@ project_instructions:
     status: testing
     source: user-approved project preset
 
+  research-workspace:
+    status: testing
+    source: user-approved research workspace preset

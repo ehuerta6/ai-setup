@@ -47,6 +47,9 @@ Need Git or GitHub delivery?
 Starting a ChatGPT or Claude Project?
 → AI workspace workflow
 
+Researching a question or comparing options?
+→ Research workflow
+
 Moving work to another chat or agent?
 → Handoff
 
@@ -156,6 +159,11 @@ preset or project-base
 → produce final Project Instructions
 
 Do not blindly paste the reusable preset as the final instructions.
+
+
+## Research and comparison
+
+Use `research-and-compare` when a decision depends on external evidence or a structured comparison. For a continuing multi-chat research effort, start with `project-instructions/research-workspace.md` and adapt it to the project's sources and question.
 
 
 ## Feature is still unclear

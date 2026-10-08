@@ -52,6 +52,18 @@ Then choose:
 
 Do not create a new artifact when an existing one already owns the responsibility.
 
+### Create a ChatGPT or Claude Project
+
+Use when setting up a long-running workspace with multiple related chats. This is a Project Instruction task, not a request to copy a whole preset unchanged.
+
+1. Select the closest existing preset from `README.md` and `WORKFLOWS.md`; use `project-base` only when no specialized preset fits.
+2. Identify the project's purpose, scope, audience, and sources of truth from supplied files and explicit decisions. Record missing context rather than filling gaps.
+3. Separate durable workspace behavior from reference documents. Keep instructions focused on how chats should work; keep detailed facts, research, and evolving project material in referenced files.
+4. Preserve decisions and rationale in a durable project source so they carry across chats. Distinguish decisions from findings, hypotheses, and open questions.
+5. Remove generic preset instructions that do not apply. Avoid repeating context already present in project files or another authoritative instruction.
+6. Add only project-specific customization needed to resolve actual requirements or constraints. Keep project-specific behavior authoritative over reusable defaults.
+7. Return concise final Project Instructions, the chosen preset, the sources used, and any unresolved questions.
+
 ## Identify the artifact type
 
 Choose:

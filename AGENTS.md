@@ -1,6 +1,6 @@
 # AI Setup
 
-This repository is the canonical source for reusable AI-assisted software engineering configuration.
+This repository is the canonical source for reusable AI-assisted software engineering configuration, with selected workflows for research, writing, learning, and long-running AI workspaces.
 
 ## Context
 
@@ -27,7 +27,7 @@ Load applicable stable rules from `rules/`:
 
 ## Skills
 
-Use `README.md` as the catalog for available configuration and `WORKFLOWS.md` to choose the appropriate workflow for the current scenario.
+Use `README.md` as the catalog for available configuration and `WORKFLOWS.md` to choose the appropriate workflow, including research and AI workspace setup.
 
 Load only the configuration relevant to the current task.
 

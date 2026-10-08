@@ -1,12 +1,22 @@
 # AI Setup
 
-Canonical reusable configuration for AI-assisted software engineering.
+Canonical reusable configuration for AI-assisted software engineering, with selected workflows for research, writing, learning, and long-running AI workspaces.
 
 This repository contains reusable skills, agents, engineering rules, templates, and Project Instructions that can be selectively adopted by individual projects.
 
 Project-specific requirements, architecture, product behavior, and technical decisions stay inside each project repository.
 
 For scenario-based usage workflows, see `WORKFLOWS.md`.
+
+## Quick start
+
+**Adopt into an existing repository:** inspect its `AGENTS.md`, conventions, and sources of truth; use the Project adoption workflow in `WORKFLOWS.md`; copy only the selected canonical files. For example, add `skills/firebase/SKILL.md` only when the project uses Firebase, and keep product-specific rules in that repository.
+
+**Create a ChatGPT or Claude Project:** choose the closest preset below, then use `skills/ai-config-builder/SKILL.md` to tailor it. For example, start a multi-chat research workspace from `project-instructions/research-workspace.md` and add the actual research question and source index.
+
+**Keep adopted configuration synchronized:** treat files here as canonical. Compare adopted copies with these paths during project audits and update only when changes fit the target project's needs. For example, diff the project's `AGENTS.md` against this repository before carrying over a reusable update; preserve intentional project-specific instructions.
+
+**Find a workflow:** use `WORKFLOWS.md`'s router. For example, use `implement-issue` for one approved issue, `ai-config-builder` to add configuration, or `research-and-compare` to evaluate options.
 
 ## How to use this repository
 
@@ -37,6 +47,12 @@ Design or evolve skills, agents, rules, templates, and Project Instructions with
 Path: `skills/project-audit/SKILL.md`
 
 Audit existing project AI configuration for drift, duplication, stale instructions, and missing reusable configuration.
+
+### `research-and-compare`
+
+Path: `skills/research-and-compare/SKILL.md`
+
+Research a question and compare options using current, traceable evidence and explicit tradeoffs.
 
 ## Planning
 
@@ -362,6 +378,12 @@ Path: `project-instructions/project-base.md`
 
 Universal starting point when no specialized Project Instruction preset fits.
 
+## `research-workspace`
+
+Path: `project-instructions/research-workspace.md`
+
+For long-running, multi-chat research projects with shared sources, findings, decisions, and continuity notes.
+
 # Registry
 
 `registry.yaml` tracks adoption status and provenance.
@@ -375,6 +397,10 @@ Possible statuses:
 - `replaced`
 
 A workflow being present in this repository does not automatically make it part of the default setup.
+
+## Licensing and attribution
+
+`SOURCE.md` files record known sources and adaptation notes; they do not establish license compatibility. Upstream license terms have not been comprehensively verified, and this repository has no selected repository-wide license. Resolve licensing before redistributing source-derived material; no license is inferred here.
 
 # Repository structure
 
