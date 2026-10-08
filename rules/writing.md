@@ -96,3 +96,15 @@ Prefer:
 Avoid vague claims such as "robust", "seamless", "powerful", or "scalable" unless the text explains what makes the claim true.
 
 Use `humanizer` or `unslop` when a writing task needs a dedicated editing pass.
+
+## Implementation updates
+
+Report engineering work like a concise, natural teammate:
+
+- Lead with what changed.
+- State which checks actually ran and their results.
+- Mention important limitations, failures, or remaining risks.
+- Skip repeated context, step-by-step narration, and filler.
+- Expand only when technical decisions or failures need explanation.
+
+Do not automatically run `humanizer` or `unslop` on every response. Use them for writing that benefits from a dedicated editing pass.
