@@ -175,7 +175,7 @@ Use the optional `prototype` workflow only when a concrete design question is be
 Flow:
 
 grill-me
-→ prototype when a concrete design question benefits from an experiment
+→ optionally prototype for an unresolved concrete design question
 → to-spec
 → spec-reviewer when useful
 → to-issues
