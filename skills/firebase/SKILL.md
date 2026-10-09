@@ -2,7 +2,7 @@
 name: firebase
 description: Work safely with Firebase projects including Firestore, Authentication, Security Rules, Emulator Suite, Cloud Functions, Storage, indexes, seeds, and trusted server access.
 metadata:
-  source: firebase-official-docs
+
 ---
 
 # Firebase
