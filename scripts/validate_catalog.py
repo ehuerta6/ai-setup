@@ -23,6 +23,8 @@ def registry_names(section: str) -> set[str]:
 def check_registry_metadata(errors: list[str]) -> None:
     text = (ROOT / "registry.yaml").read_text(encoding="utf-8")
     valid_statuses = {"testing", "accepted", "rejected", "default", "replaced"}
+    if re.search(r"^\\s+(?:source|inspired_by|adapted_from|origin|provenance):", text, re.M):
+        fail(errors, "registry contains provenance-only metadata")
     for section in ("skills", "agents", "project_instructions"):
         names = registry_names(section)
         section_match = re.search(rf"^{section}:\s*$(.*?)(?=^[A-Za-z_]+:|\Z)", text, re.M | re.S)
