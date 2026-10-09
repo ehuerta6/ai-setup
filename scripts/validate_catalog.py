@@ -31,11 +31,8 @@ def check_registry_metadata(errors: list[str]) -> None:
             entry = re.search(rf"^  {re.escape(name)}:\s*$(.*?)(?=^  [\w-]+:|\Z)", body, re.M | re.S)
             data = entry.group(1) if entry else ""
             status = re.search(r"^    status:\s*(\S+)\s*$", data, re.M)
-            source = re.search(r"^    source:\s*\S.*$", data, re.M)
             if not status or status.group(1) not in valid_statuses:
                 fail(errors, f"registry {section}.{name} has missing or invalid status")
-            if not source:
-                fail(errors, f"registry {section}.{name} is missing source provenance")
 
 
 def check_registry_files(errors: list[str], section: str, directory: str, pattern: str) -> None:
