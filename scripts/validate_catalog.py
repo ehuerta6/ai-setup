@@ -60,14 +60,22 @@ def main() -> int:
             continue
         metadata = parts[1]
         name = re.search(r"^name:\s*([^\s#]+)\s*$", metadata, re.M)
-        description = re.search(r"^description:\s*\S.*$", metadata, re.M)
+        description = re.search(r"^description:\s*(.*?)\s*$", metadata, re.M)
         expected = path.parent.name
         if not name:
             fail(errors, f"{path.relative_to(ROOT)} is missing a valid name field")
-        elif name.group(1) != expected:
-            fail(errors, f"{path.relative_to(ROOT)} name '{name.group(1)}' does not match directory '{expected}'")
-        if not description:
-            fail(errors, f"{path.relative_to(ROOT)} is missing a description field")
+        else:
+            skill_name = name.group(1)
+            if len(skill_name) > 64 or not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", skill_name):
+                fail(errors, f"{path.relative_to(ROOT)} name does not meet Agent Skills naming requirements")
+            if skill_name != expected:
+                fail(errors, f"{path.relative_to(ROOT)} name '{skill_name}' does not match directory '{expected}'")
+        if not description or not description.group(1):
+            fail(errors, f"{path.relative_to(ROOT)} is missing a valid description field")
+        elif len(description.group(1)) > 1024:
+            fail(errors, f"{path.relative_to(ROOT)} description exceeds 1024 characters")
+        if re.search(r"^metadata:\s*(?:#.*)?$", metadata, re.M):
+            fail(errors, f"{path.relative_to(ROOT)} has empty metadata; omit it or provide string key-value fields")
 
     check_registry_files(errors, "skills", "skills", "*/SKILL.md")
     check_registry_files(errors, "agents", "agents", "*.md")
