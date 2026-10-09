@@ -2,8 +2,7 @@
 name: verify-change
 description: Verify a code change using the repository's actual configured checks and report concrete evidence without hiding failures.
 metadata:
-  adapted_from:
-    - cappy-hub verify-change
+
 ---
 
 # Verify change
