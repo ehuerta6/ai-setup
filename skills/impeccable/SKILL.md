@@ -2,8 +2,7 @@
 name: impeccable
 description: Design, critique, audit, and refine production frontend UI and UX with strong hierarchy, accessibility, responsive behavior, clear states, and deliberate visual decisions.
 metadata:
-  adapted_from:
-    - pbakaus/impeccable
+
 ---
 
 # Impeccable
