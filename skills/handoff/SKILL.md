@@ -1,8 +1,6 @@
 ---
 name: handoff
 description: Transfer unfinished work to a fresh agent or session using concise context pointers instead of duplicating existing artifacts.
-metadata:
-
 ---
 
 # Handoff
