@@ -1,8 +1,6 @@
 ---
 name: to-spec
 description: Turn already-resolved product and engineering decisions into a durable implementation specification without reopening settled decisions.
-metadata:
-
 ---
 
 # To spec
