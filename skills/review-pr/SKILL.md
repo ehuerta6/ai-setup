@@ -1,8 +1,6 @@
 ---
 name: review-pr
 description: Review a pull request or completed diff separately against its requirements and against the repository's engineering standards.
-metadata:
-
 ---
 
 # Review PR
