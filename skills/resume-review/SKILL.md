@@ -2,7 +2,7 @@
 name: resume-review
 description: Roast, review, rewrite, and tailor technical resumes for SWE, AI engineering, backend, full-stack, infrastructure, developer tools, ML, internships, and new-grad roles.
 metadata:
-  source: resume-reviews-project
+
 ---
 
 # Resume review
