@@ -1,36 +1,18 @@
 # AI Setup
 
-Canonical reusable configuration for AI-assisted software engineering, with selected workflows for research, writing, learning, and long-running AI workspaces.
+Reusable configuration for AI-assisted software engineering, with selected workflows for research, writing, learning, and multi-chat workspaces.
 
-This repository contains reusable skills, agents, engineering rules, templates, and Project Instructions that can be selectively adopted by individual projects.
+Browse this README to find configuration. Use [WORKFLOWS.md](WORKFLOWS.md) to choose a process for a specific task.
 
-Project-specific requirements, architecture, product behavior, and technical decisions stay inside each project repository.
-
-For scenario-based usage workflows, see `WORKFLOWS.md`.
+Projects can adopt only what they need. Keep product behavior, architecture, and other project-specific decisions in the project repository.
 
 ## Quick start
 
-**Adopt into an existing repository:** inspect its `AGENTS.md`, conventions, and sources of truth; use the Project adoption workflow in `WORKFLOWS.md`; copy only the selected canonical files. For example, add `skills/firebase/SKILL.md` only when the project uses Firebase, and keep product-specific rules in that repository.
+- **Choose a workflow:** start with the scenario router in [WORKFLOWS.md](WORKFLOWS.md), then load the relevant skills.
+- **Adopt configuration into a project:** inspect the project's instructions, stack, and conventions, then follow the Project adoption route in [WORKFLOWS.md](WORKFLOWS.md). Copy only the selected canonical files.
+- **Set up a multi-chat workspace:** choose a Project Instructions preset below and tailor it with `skills/ai-config-builder/SKILL.md`.
 
-**Create a ChatGPT or Claude Project:** choose the closest preset below, then use `skills/ai-config-builder/SKILL.md` to tailor it. For example, start a multi-chat research workspace from `project-instructions/research-workspace.md` and add the actual research question and source index.
-
-**Keep adopted configuration synchronized:** treat files here as canonical. Compare adopted copies with these paths during project audits and update only when changes fit the target project's needs. For example, diff the project's `AGENTS.md` against this repository before carrying over a reusable update; preserve intentional project-specific instructions.
-
-**Find a workflow:** use `WORKFLOWS.md`'s router. For example, use `implement-issue` for one approved issue, `ai-config-builder` to add configuration, or `research-and-compare` to evaluate options.
-
-## How to use this repository
-
-When applying this setup to another project:
-
-1. Inspect that project's existing AI instructions, architecture, stack, Git workflow, and conventions.
-2. Read this README as the catalog of available reusable configuration.
-3. Select only the skills, agents, rules, templates, and Project Instructions that actually apply.
-4. Prefer existing project-specific instructions when they contain intentional product or architecture behavior.
-5. Copy the exact canonical files from this repository instead of recreating them from the descriptions below.
-6. Do not copy everything by default.
-7. Keep project-specific context inside the project.
-
-Before modifying the target project, present the proposed files to add, keep, replace, or skip.
+The catalog below lists each artifact's canonical path and purpose.
 
 # Skills
 
