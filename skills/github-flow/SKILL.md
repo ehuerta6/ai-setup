@@ -2,9 +2,7 @@
 name: github-flow
 description: Execute Git and GitHub operations using the repository's documented conventions for commits, issues, pull requests, and merging.
 metadata:
-  adapted_from:
-    - cappycode git conventions
-    - cappy-hub development workflow
+
 ---
 
 # GitHub flow
