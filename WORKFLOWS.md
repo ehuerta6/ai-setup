@@ -67,6 +67,7 @@ Use when the product or technical direction is still unclear.
 Flow:
 
 grill-me
+→ prototype when a concrete design question needs trying alternatives
 → to-spec
 → ai-config-builder adopt when the project is defined
 → to-issues when implementation is ready
@@ -81,6 +82,7 @@ Use when the desired product is understood but implementation has not begun.
 Flow:
 
 grill-me when meaningful ambiguity remains
+→ prototype when a concrete design question benefits from an experiment
 → to-spec
 → spec-reviewer when useful
 → ai-config-builder adopt
@@ -168,9 +170,12 @@ Use `research-and-compare` when a decision depends on external evidence or a str
 
 ## Feature is still unclear
 
+Use the optional `prototype` workflow only when a concrete design question is better answered by comparing an isolated UI or logic experiment. Skip it when discussion resolves the question. Prototypes are temporary and do not automatically become production code.
+
 Flow:
 
 grill-me
+→ prototype when a concrete design question benefits from an experiment
 → to-spec
 → spec-reviewer when useful
 → to-issues
