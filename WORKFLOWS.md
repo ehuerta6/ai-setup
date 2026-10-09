@@ -84,6 +84,8 @@ Classify relevant reusable configuration as:
 - REPLACE
 - SKIP
 
+Before changing the project, present the proposed files and classify each as ADD, KEEP EXISTING, REPLACE, or SKIP.
+
 Project-specific behavior and architecture take priority over reusable defaults.
 
 
