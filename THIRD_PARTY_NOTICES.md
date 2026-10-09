@@ -1,4 +1,6 @@
-The root [MIT license](LICENSE) applies only to original material in this repository owned by the repository author. It does not replace or override third-party licenses. The notices below apply to the identified adapted material; check each upstream license before reuse.\n\n# Third-party license notices
+The root [MIT license](LICENSE) applies only to original material in this repository owned by the repository author. It does not replace or override third-party licenses. The notices below apply to the identified adapted material; check each upstream license before reuse.
+
+# Third-party license notices
 
 This file contains copyright and license notices retained for compliance.
 
