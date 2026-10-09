@@ -2,7 +2,7 @@
 
 Scenario-based guide for using `ai-setup`.
 
-These routes are suggestions, not a required sequence. Use only the steps that help with the task.
+These routes are suggestions, not a required sequence. Use only the steps that help with the task. For a single reusable workflow, load its skill; for durable multi-chat context, start from a Project Instruction preset.
 
 ## Router
 
