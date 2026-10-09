@@ -1,6 +1,6 @@
 # Third-party license notices
 
-This file contains copyright and license notices retained for compliance. It is not artifact provenance metadata.
+This file contains copyright and license notices retained for compliance.
 
 ## MIT-licensed material
 
