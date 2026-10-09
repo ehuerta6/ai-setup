@@ -4,15 +4,13 @@ This file preserves required license notices for adapted material. These are leg
 
 ## Applicable material
 
-The MIT notices cover adapted material in `skills/grill-me/SKILL.md`, `skills/to-spec/SKILL.md`, `skills/to-issues/SKILL.md`, and `skills/humanizer/SKILL.md`. The Apache notice covers adapted material in `skills/impeccable/SKILL.md`.
+The MIT notices cover adapted material in `skills/grill-me/SKILL.md`, `skills/to-spec/SKILL.md`, `skills/to-issues/SKILL.md`, `skills/humanizer/SKILL.md`, and `skills/unslop/SKILL.md`. The Apache notice covers adapted material in `skills/impeccable/SKILL.md`.
 
-The upstream terms were checked before editing these notices. This list identifies only notice scope needed for license compliance.
+This list identifies notice scope for license compliance.
 
 ## MIT License
 
 Copyright (c) 2026 Matt Pocock
-
-Source: https://github.com/mattpocock/skills
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -34,7 +32,9 @@ SOFTWARE.
 
 Copyright (c) 2025 Siqi Chen
 
-Source: https://github.com/blader/humanizer
+Copyright (c) 2026 Lauren Tan
+
+Both notices apply under the MIT License. The first covers `skills/humanizer/SKILL.md`; the second covers adapted material in `skills/unslop/SKILL.md`.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -53,6 +53,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+The `theclaymethod/unslop` README states that its work is MIT licensed, but the repository has no LICENSE file or named copyright holder. The formal license notice cannot be verified from the repository; confirm the rights and notice before redistributing adapted material.
 
 ## Apache License 2.0
 
