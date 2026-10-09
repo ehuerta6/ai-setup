@@ -2,8 +2,7 @@
 name: retro
 description: Review completed AI-assisted engineering work to identify concrete improvements to skills, rules, context, tooling, and automated checks.
 metadata:
-  adapted_from:
-    - mattpocock/skills retro
+
 ---
 
 # Retro
