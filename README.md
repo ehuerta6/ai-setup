@@ -9,7 +9,7 @@ Projects can adopt only what they need. Keep product behavior, architecture, and
 ## Quick start
 
 - **Choose a workflow:** start with the scenario router in [WORKFLOWS.md](WORKFLOWS.md), then load the relevant skills.
-- **Adopt configuration into a project:** inspect the project's instructions, stack, and conventions, then follow the Project adoption route in [WORKFLOWS.md](WORKFLOWS.md). Copy only the selected canonical files.
+- **Adopt configuration into a project:** inspect its AI instructions, architecture, stack, Git workflow, and conventions. Then follow the Project adoption route in [WORKFLOWS.md](WORKFLOWS.md) and copy only the selected canonical files. For example, add `skills/firebase/SKILL.md` only to a project that uses Firebase, and keep product-specific instructions there.
 - **Set up a multi-chat workspace:** choose a Project Instructions preset below and tailor it with `skills/ai-config-builder/SKILL.md`.
 
 The catalog below lists each artifact's canonical path and purpose.
