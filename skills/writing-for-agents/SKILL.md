@@ -2,8 +2,7 @@
 name: writing-for-agents
 description: Write and maintain skills, AGENTS.md files, agent instructions, and other documents consumed by AI agents with minimal context load and clear behavior.
 metadata:
-  adapted_from:
-    - mattpocock/skills writing-for-agents
+
 ---
 
 # Writing for agents
