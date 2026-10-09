@@ -2,9 +2,7 @@
 name: implement-issue
 description: Implement one approved GitHub Issue from scope discovery through a verified, review-ready change.
 metadata:
-  adapted_from:
-    - cappy-hub implement-issue
-    - cappycode implement-github-issue
+
 ---
 
 # Implement issue
