@@ -2,9 +2,7 @@
 name: debug-with-evidence
 description: Diagnose bugs and regressions by reproducing the exact failure, gathering evidence, testing hypotheses, and verifying the fix.
 metadata:
-  adapted_from:
-    - mattpocock/skills diagnosing-bugs
-    - cappy-hub debugging workflow
+
 ---
 
 # Debug with evidence
