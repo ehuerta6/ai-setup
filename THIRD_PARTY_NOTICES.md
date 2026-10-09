@@ -1,14 +1,16 @@
 # Third-party license notices
 
-This file preserves required license notices for adapted material. These are legal notices, not catalog provenance metadata.
+This file contains copyright and license notices retained for compliance. It is not artifact provenance metadata.
 
-## Applicable material
+## MIT-licensed material
 
-The MIT notices cover adapted material in `skills/grill-me/SKILL.md`, `skills/to-spec/SKILL.md`, `skills/to-issues/SKILL.md`, `skills/humanizer/SKILL.md`, and `skills/unslop/SKILL.md`. The Apache notice covers adapted material in `skills/impeccable/SKILL.md`.
+The following adapted skills contain material under MIT:
 
-This list identifies notice scope for license compliance.
+- Matt Pocock, `skills/grill-me/SKILL.md`, `skills/to-spec/SKILL.md`, and `skills/to-issues/SKILL.md`.
+- Siqi Chen, `skills/humanizer/SKILL.md`.
+- Lauren Tan, `skills/unslop/SKILL.md`.
 
-## MIT License
+MIT License
 
 Copyright (c) 2026 Matt Pocock
 
@@ -30,11 +32,9 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
+MIT License
+
 Copyright (c) 2025 Siqi Chen
-
-Copyright (c) 2026 Lauren Tan
-
-Both notices apply under the MIT License. The first covers `skills/humanizer/SKILL.md`; the second covers adapted material in `skills/unslop/SKILL.md`.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -54,17 +54,31 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-The `theclaymethod/unslop` README states that its work is MIT licensed, but the repository has no LICENSE file or named copyright holder. The formal license notice cannot be verified from the repository; confirm the rights and notice before redistributing adapted material.
+MIT License
+
+Copyright (c) 2026 Lauren Tan
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 ## Apache License 2.0
 
-Copyright 2025 Paul Bakaus
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    https://www.apache.org/licenses/LICENSE-2.0
+Adapted material in `skills/impeccable/SKILL.md` is covered by the following notice. The adapted file has been modified.
 
                                  Apache License
                            Version 2.0, January 2004
@@ -259,5 +273,6 @@ You may obtain a copy of the License at
    limitations under the License.
 
 
-The adapted file `skills/impeccable/SKILL.md` has been modified; this notice identifies the modified file. Modified
-adapted files should carry a prominent notice stating that they were changed.
+## Unverified license terms
+
+The `theclaymethod/unslop` README states that its work is MIT licensed, but the repository has no LICENSE file or named copyright holder. Its formal license notice cannot be verified from the repository. Confirm the rights and notice before redistributing adapted material.
