@@ -35,10 +35,13 @@ For each relevant configuration item return:
 - stale project decisions;
 - copied skills that drifted from canonical versions;
 - oversized instruction files;
-- configuration with no evidence of use;\n- recurring friction or successful outcomes recorded in retros or task history;
+- configuration with no evidence of use;
+- recurring friction or successful outcomes recorded in retros or task history;
 - generic rules embedded in project-specific context.
 
-Treat missing usage evidence as unknown, not proof that configuration is unused. Do not change registry adoption status without explicit user approval.\n\nProject-specific behavior wins over reusable defaults.
+Treat missing usage evidence as unknown, not proof that configuration is unused. Do not change registry adoption status without explicit user approval.
+
+Project-specific behavior wins over reusable defaults.
 
 Do not make changes until the proposed cleanup is approved.
 
