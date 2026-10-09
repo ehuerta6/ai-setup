@@ -1,8 +1,6 @@
 ---
 name: implement-issue
 description: Implement one approved GitHub Issue from scope discovery through a verified, review-ready change.
-metadata:
-
 ---
 
 # Implement issue
