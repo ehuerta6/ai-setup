@@ -24,7 +24,7 @@ Review the relevant:
 - review findings;
 - failures and rework.
 
-### 2. Identify friction
+When evaluating reusable configuration, record the artifact and the real task where it was used, plus the observed result or friction. If it has not been used in a real task, say it remains untested; passing a validator is not usage evidence.\n\n### 2. Identify friction
 
 Look for concrete problems in:
 
