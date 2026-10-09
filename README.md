@@ -62,7 +62,13 @@ Path: `skills/grill-me/SKILL.md`
 
 Use when a feature, product decision, or implementation plan still contains ambiguity.
 
-Stress-tests decisions before implementation so agents do not have to guess.
+Stress-tests decisions before implementation so agents do not have to guess. Sharpens domain terminology, surfaces behavior conflicts, and identifies useful edge cases.
+
+### `prototype`
+
+Path: `skills/prototype/SKILL.md`
+
+Optional disposable UI or logic experiments for answering concrete design questions before implementation. Use only when trying alternatives will resolve uncertainty better than discussion.
 
 ### `to-spec`
 
@@ -386,7 +392,7 @@ For long-running, multi-chat research projects with shared sources, findings, de
 
 # Registry
 
-`registry.yaml` tracks adoption status and provenance.
+`registry.yaml` tracks artifact identity and adoption status.
 
 Possible statuses:
 
@@ -398,10 +404,6 @@ Possible statuses:
 
 A workflow being present in this repository does not automatically make it part of the default setup.
 
-## Licensing and attribution
-
-`SOURCE.md` files record known sources and adaptation notes; they do not establish license compatibility. Upstream license terms have not been comprehensively verified, and this repository has no selected repository-wide license. Resolve licensing before redistributing source-derived material; no license is inferred here.
-
 # Repository structure
 
 - `skills/` — reusable workflows
@@ -409,7 +411,7 @@ A workflow being present in this repository does not automatically make it part 
 - `rules/` — stable engineering constraints
 - `templates/` — reusable artifact structures
 - `project-instructions/` — reusable multi-chat project behavior
-- `registry.yaml` — adoption status and provenance
+- `registry.yaml` — artifact identity and adoption status
 - `AGENTS.md` — instructions for agents working inside this repository
 - `WORKFLOWS.md` — scenario-based guide for choosing workflows
 
