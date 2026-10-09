@@ -67,7 +67,7 @@ Use when the product or technical direction is still unclear.
 Flow:
 
 grill-me
-→ prototype when a concrete design question needs trying alternatives
+→ optionally prototype for an unresolved concrete design question
 → to-spec
 → ai-config-builder adopt when the project is defined
 → to-issues when implementation is ready
@@ -82,7 +82,7 @@ Use when the desired product is understood but implementation has not begun.
 Flow:
 
 grill-me when meaningful ambiguity remains
-→ prototype when a concrete design question benefits from an experiment
+→ optionally prototype for an unresolved concrete design question
 → to-spec
 → spec-reviewer when useful
 → ai-config-builder adopt
