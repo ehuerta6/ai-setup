@@ -14,6 +14,22 @@ Projects can adopt only what they need. Keep product behavior, architecture, and
 
 The catalog below lists each artifact's canonical path and purpose.
 
+## Choosing configuration
+
+Use the smallest artifact that fits the job:
+
+| Artifact | Use it for |
+| --- | --- |
+| Skill | A repeatable task workflow, such as [research-and-compare](skills/research-and-compare/SKILL.md). |
+| Agent | A focused role that benefits from its own instructions or review context. |
+| Rule | A stable constraint that should guide many kinds of work, such as [security](rules/security.md). |
+| Template | A starting structure for a recurring document or decision. |
+| Project Instruction | Shared context for a long-running, multi-chat workspace, such as [research-workspace](project-instructions/research-workspace.md). |
+
+You do not need to adopt the whole catalog. In an existing repository, inspect its own instructions first, then copy only the relevant canonical files and keep product and architecture decisions in that repository. For example, a Firebase project might adopt `skills/firebase/SKILL.md` and `rules/security.md`, while leaving unrelated skills behind.
+
+The catalog also supports nontechnical work. Use [research-and-compare](skills/research-and-compare/SKILL.md) for a focused comparison, [learning-coach](project-instructions/learning-coach.md) for a multi-chat learning workspace, or [project-base](project-instructions/project-base.md) for personal planning that needs continuity across chats. Skills guide a task; Project Instructions hold durable workspace context. The project workspace, not this reusable catalog, should contain personal details and decisions.
+
 # Skills
 
 ## Configuration
