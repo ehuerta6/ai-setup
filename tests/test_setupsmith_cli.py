@@ -217,6 +217,31 @@ class SkillInstallationTests(unittest.TestCase):
             code = SETUPSMITH.main(arguments)
         return code, output.getvalue() + errors.getvalue()
 
+    def run_adopt(self, mappings=(), response="", preview=False, source=None, interactive=True):
+        output = io.StringIO()
+        errors = io.StringIO()
+
+        class InteractiveInput(io.StringIO):
+            def isatty(self):
+                return interactive
+
+        arguments = ["adopt", "--source", str(source or self.source), "--project", str(self.project)]
+        for mapping in mappings:
+            arguments.extend(["--map", mapping])
+        if preview:
+            arguments.append("--preview-only")
+        with patch.object(sys, "stdin", InteractiveInput(response)), redirect_stdout(output), redirect_stderr(errors):
+            code = SETUPSMITH.main(arguments)
+        return code, output.getvalue() + errors.getvalue()
+
+    @staticmethod
+    def write_existing_skill(path, text="Canonical fixture.\n", resource=b"resource\x00", skill_name="guide"):
+        path.mkdir(parents=True)
+        (path / "SKILL.md").write_text(
+            f"---\nname: {skill_name}\ndescription: Fixture installer skill.\n---\n" + text, encoding="utf-8")
+        (path / "references").mkdir()
+        (path / "references/data.bin").write_bytes(resource)
+
     def project_file_snapshot(self):
         return {path.relative_to(self.project).as_posix(): path.read_bytes()
                 for path in self.project.rglob("*") if path.is_file()}
@@ -440,6 +465,9 @@ class SkillInstallationTests(unittest.TestCase):
         invalid_url_entry = dict(entry, source="https://[bad/catalog.git", targets=[
             {"assistant": "codex", "path": ".agents/skills/guide", "state": "installed"}])
         malformed.append(json.dumps({"schema_version": 1, "artifacts": [invalid_url_entry]}))
+        malformed.append(json.dumps({"schema_version": 1, "artifacts": [dict(entry, baseline_state=[])]}))
+        malformed.append(json.dumps({"schema_version": 1, "artifacts": [dict(entry, content_digest=[])]}))
+        malformed.append(json.dumps({"schema_version": 1, "artifacts": [entry, entry]}))
         for value in malformed:
             with self.subTest(value=value):
                 manifest_path.write_text(value, encoding="utf-8")
@@ -448,6 +476,254 @@ class SkillInstallationTests(unittest.TestCase):
                 self.assertIn("setupsmith:", message)
                 self.assertNotIn("Traceback", message)
         self.assertFalse((self.project / ".agents").exists())
+
+    def test_adopts_exact_native_match_with_verified_baseline_and_preserves_bytes(self):
+        destination = self.project / ".agents/skills/guide"
+        import shutil
+        destination.parent.mkdir(parents=True)
+        shutil.copytree(self.source / "skills/guide", destination)
+        before = self.project_file_snapshot()
+        code, preview = self.run_adopt((".agents/skills/guide=skills/guide",), preview=True)
+        self.assertEqual(code, 0, preview)
+        self.assertIn("verified content baseline", preview)
+        self.assertEqual(self.project_file_snapshot(), before)
+        code, output = self.run_adopt((".agents/skills/guide=skills/guide",), "INSTALL\n")
+        self.assertEqual(code, 0, output)
+        manifest = json.loads((self.project / ".setupsmith/manifest.json").read_text())
+        entry = manifest["artifacts"][0]
+        self.assertEqual(entry["baseline_state"], "verified")
+        self.assertEqual(entry["targets"][0]["adoption"], "adopted")
+        self.assertEqual(entry["revision"], self.git(self.source, "rev-parse", "HEAD"))
+        self.assertEqual(entry["targets"][0]["path"], ".agents/skills/guide")
+        self.assertEqual(self.project_file_snapshot()[".agents/skills/guide/references/nested/blob.bin"], b"\x00\xff\x10")
+        self.assertEqual({key: value for key, value in self.project_file_snapshot().items()
+                          if key != ".setupsmith/manifest.json"},
+                         {key: value for key, value in before.items()})
+
+    def test_explicit_custom_adoption_records_unknown_without_rewriting_tree(self):
+        destination = self.project / ".claude/skills/guide"
+        self.write_existing_skill(destination, "Customized locally.\n", b"custom\x00bytes")
+        before = self.project_file_snapshot()
+        code, output = self.run_adopt((".claude/skills/guide=skills/guide",), "INSTALL\n")
+        self.assertEqual(code, 0, output)
+        manifest = json.loads((self.project / ".setupsmith/manifest.json").read_text())
+        entry = manifest["artifacts"][0]
+        self.assertEqual(entry["baseline_state"], "unknown")
+        self.assertEqual(entry["targets"][0]["adoption"], "adopted")
+        self.assertIsNone(entry["revision"])
+        self.assertEqual(entry["files"]["references/data.bin"],
+                         __import__("hashlib").sha256(b"custom\x00bytes").hexdigest())
+        after = self.project_file_snapshot()
+        for path, content in before.items():
+            self.assertEqual(after[path], content)
+
+    def test_explicit_local_name_mapping_reloads_and_accepts_later_target(self):
+        first = self.project / ".agents/skills/local-name"
+        second = self.project / ".claude/skills/local-name"
+        self.write_existing_skill(first, "Local version.\n", b"local\x00bytes", skill_name="local-name")
+        import shutil
+        shutil.copytree(first, second)
+        before = self.project_file_snapshot()
+
+        mapping = ".agents/skills/local-name=skills/guide"
+        code, output = self.run_adopt((mapping,), "INSTALL\n")
+        self.assertEqual(code, 0, output)
+        manifest_path = self.project / ".setupsmith/manifest.json"
+        manifest = SETUPSMITH.load_manifest(manifest_path)
+        entry = manifest["artifacts"][0]
+        self.assertEqual(entry["id"], "skills/guide")
+        self.assertEqual(entry["targets"][0]["path"], ".agents/skills/local-name")
+        self.assertEqual(entry["baseline_state"], "unknown")
+
+        code, output = self.run_adopt((".claude/skills/local-name=skills/guide",), "INSTALL\n")
+        self.assertEqual(code, 0, output)
+        updated = SETUPSMITH.load_manifest(manifest_path)["artifacts"][0]
+        self.assertEqual({target["path"] for target in updated["targets"]},
+                         {".agents/skills/local-name", ".claude/skills/local-name"})
+        self.assertEqual(updated["id"], "skills/guide")
+        after = self.project_file_snapshot()
+        for path, content in before.items():
+            self.assertEqual(after[path], content, path)
+
+        adopted_bytes = {path: content for path, content in after.items()
+                         if path.startswith((".agents/skills/local-name/", ".claude/skills/local-name/"))}
+        code, output = self.run_install("INSTALL\n", skills=("extra",), assistants=("codex",))
+        self.assertEqual(code, 0, output)
+        installed_manifest = SETUPSMITH.load_manifest(manifest_path)
+        self.assertEqual({entry["id"] for entry in installed_manifest["artifacts"]},
+                         {"skills/guide", "skills/extra"})
+        installed_project = self.project_file_snapshot()
+        for path, content in adopted_bytes.items():
+            self.assertEqual(installed_project[path], content, path)
+
+    def test_adopt_rejects_unsafe_local_basename(self):
+        self.write_existing_skill(self.project / ".agents/skills/guide")
+        code, output = self.run_adopt((".agents/skills/local name=skills/guide",), "INSTALL\n")
+        self.assertEqual(code, 2)
+        self.assertIn("unsafe or invalid adoption mapping", output)
+        self.assertFalse((self.project / ".setupsmith/manifest.json").exists())
+
+    def test_installer_cannot_replace_or_reclassify_unknown_baseline(self):
+        destination = self.project / ".agents/skills/guide"
+        self.write_existing_skill(destination, "Customized locally.\n")
+        code, output = self.run_adopt((".agents/skills/guide=skills/guide",), "INSTALL\n")
+        self.assertEqual(code, 0, output)
+        files_before = self.project_file_snapshot()
+        manifest_before = (self.project / ".setupsmith/manifest.json").read_bytes()
+        code, output = self.run_install("INSTALL\n", assistants=("codex",))
+        self.assertEqual(code, 2)
+        self.assertIn("provenance or verified content baseline", output)
+        self.assertEqual(self.project_file_snapshot(), files_before)
+        self.assertEqual((self.project / ".setupsmith/manifest.json").read_bytes(), manifest_before)
+
+    def test_candidate_name_is_not_automatically_adopted_and_mapping_is_required(self):
+        self.write_existing_skill(self.project / ".agents/skills/guide", "Different.\n")
+        code, report = self.run_adopt(preview=True)
+        self.assertEqual(code, 0, report)
+        self.assertIn("name/path only; unverified", report)
+        self.assertFalse((self.project / ".setupsmith/manifest.json").exists())
+
+    def test_duplicate_mappings_and_existing_ownership_are_rejected(self):
+        import shutil
+        first = self.project / ".agents/skills/guide"
+        first.parent.mkdir(parents=True)
+        shutil.copytree(self.source / "skills/guide", first)
+        mapping = ".agents/skills/guide=skills/guide"
+        code, output = self.run_adopt((mapping, mapping), "INSTALL\n")
+        self.assertEqual(code, 2)
+        self.assertIn("only once", output)
+        self.assertFalse((self.project / ".setupsmith/manifest.json").exists())
+        other = self.project / ".claude/skills/guide"
+        other.parent.mkdir(parents=True)
+        shutil.copytree(self.source / "skills/guide", other)
+        code, output = self.run_adopt((".agents/skills/guide=skills/guide",
+                                       ".claude/skills/guide=skills/guide"), "INSTALL\n")
+        self.assertEqual(code, 0, output)
+        entry = json.loads((self.project / ".setupsmith/manifest.json").read_text())["artifacts"][0]
+        self.assertEqual({target["path"] for target in entry["targets"]},
+                         {".agents/skills/guide", ".claude/skills/guide"})
+
+    def test_preexisting_manifest_ownership_cannot_be_reassigned(self):
+        self.write_existing_skill(self.project / ".agents/skills/guide")
+        code, output = self.run_adopt((".agents/skills/guide=skills/guide",), "INSTALL\n")
+        self.assertEqual(code, 0, output)
+        before = (self.project / ".setupsmith/manifest.json").read_bytes()
+        code, output = self.run_adopt((".agents/skills/guide=skills/extra",), "INSTALL\n")
+        self.assertEqual(code, 2)
+        self.assertIn("already managed", output)
+        self.assertEqual((self.project / ".setupsmith/manifest.json").read_bytes(), before)
+
+    def test_already_managed_exact_skill_is_idempotent(self):
+        self.write_existing_skill(self.project / ".agents/skills/guide")
+        mapping = ".agents/skills/guide=skills/guide"
+        self.assertEqual(self.run_adopt((mapping,), "INSTALL\n")[0], 0)
+        manifest = self.project / ".setupsmith/manifest.json"
+        before = manifest.read_bytes()
+        modified = manifest.stat().st_mtime_ns
+        code, output = self.run_adopt((mapping,), "INSTALL\n")
+        self.assertEqual(code, 0, output)
+        self.assertIn("no files or manifest rewritten", output)
+        self.assertEqual(manifest.read_bytes(), before)
+        self.assertEqual(manifest.stat().st_mtime_ns, modified)
+
+    def test_unselected_candidate_remains_unmanaged_and_legacy_is_labeled(self):
+        self.write_existing_skill(self.project / ".agents/skills/guide")
+        self.write_existing_skill(self.project / ".codex/skills/guide")
+        before_legacy = (self.project / ".codex/skills/guide/SKILL.md").read_bytes()
+        code, report = self.run_adopt(preview=True)
+        self.assertEqual(code, 0, report)
+        self.assertIn("legacy/non-native", report)
+        code, output = self.run_adopt((".agents/skills/guide=skills/guide",), "INSTALL\n")
+        self.assertEqual(code, 0, output)
+        self.assertEqual((self.project / ".codex/skills/guide/SKILL.md").read_bytes(), before_legacy)
+        entry = json.loads((self.project / ".setupsmith/manifest.json").read_text())["artifacts"][0]
+        self.assertEqual([target["assistant"] for target in entry["targets"]], ["codex"])
+
+    def test_symlink_escape_and_path_traversal_are_refused(self):
+        outside = self.base / "outside"
+        self.write_existing_skill(outside)
+        (self.project / ".agents/skills").mkdir(parents=True)
+        os.symlink(outside, self.project / ".agents/skills/guide")
+        code, output = self.run_adopt((".agents/skills/guide=skills/guide",), "INSTALL\n")
+        self.assertEqual(code, 2)
+        self.assertIn("not safely discovered", output)
+        self.assertEqual(set(outside.iterdir()), {outside / "SKILL.md", outside / "references"})
+        code, output = self.run_adopt(("../AGENTS.md=skills/guide",), "INSTALL\n")
+        self.assertEqual(code, 2)
+        self.assertFalse((self.project / ".setupsmith/manifest.json").exists())
+
+    def test_unavailable_canonical_revision_allows_only_explicit_unknown_mapping(self):
+        self.write_existing_skill(self.project / ".agents/skills/guide", "Customized.\n")
+        source = "https://example.invalid/catalog.git"
+        with patch.object(SETUPSMITH, "resolve_source", side_effect=SETUPSMITH.DiscoveryError("offline")):
+            code, output = self.run_adopt((".agents/skills/guide=skills/guide",), "INSTALL\n", source=source)
+        self.assertEqual(code, 0, output)
+        self.assertIn("Resolved immutable revision: none", output)
+        entry = json.loads((self.project / ".setupsmith/manifest.json").read_text())["artifacts"][0]
+        self.assertIsNone(entry["revision"])
+        self.assertIsNone(entry["configured_ref"])
+        self.assertEqual(entry["baseline_state"], "unknown")
+
+    def test_noninteractive_adoption_refuses_manifest_write(self):
+        self.write_existing_skill(self.project / ".agents/skills/guide")
+        code, output = self.run_adopt((".agents/skills/guide=skills/guide",), interactive=False)
+        self.assertEqual(code, 2)
+        self.assertIn("interactive confirmation", output)
+        self.assertFalse((self.project / ".setupsmith/manifest.json").exists())
+
+    def test_declined_adoption_does_not_write_manifest_or_change_files(self):
+        self.write_existing_skill(self.project / ".agents/skills/guide")
+        before = self.project_file_snapshot()
+        code, output = self.run_adopt((".agents/skills/guide=skills/guide",), "no\n")
+        self.assertEqual(code, 0, output)
+        self.assertIn("Declined", output)
+        self.assertEqual(self.project_file_snapshot(), before)
+
+    def test_stale_preview_rechecks_adopted_content(self):
+        destination = self.project / ".agents/skills/guide"
+        self.write_existing_skill(destination)
+        args = ["adopt", "--source", str(self.source), "--project", str(self.project),
+                "--map", ".agents/skills/guide=skills/guide"]
+        output = io.StringIO()
+        errors = io.StringIO()
+        class InteractiveInput(io.StringIO):
+            def isatty(self): return True
+        def change_content(_prompt):
+            (destination / "SKILL.md").write_text("changed after preview", encoding="utf-8")
+            return "INSTALL"
+        with patch.object(sys, "stdin", InteractiveInput("")), patch("builtins.input", side_effect=change_content), redirect_stdout(output), redirect_stderr(errors):
+            code = SETUPSMITH.main(args)
+        self.assertEqual(code, 2)
+        self.assertIn("stale preview", errors.getvalue())
+        self.assertFalse((self.project / ".setupsmith/manifest.json").exists())
+
+    def test_manifest_write_failure_leaves_imported_files_unchanged(self):
+        destination = self.project / ".agents/skills/guide"
+        self.write_existing_skill(destination)
+        before = self.project_file_snapshot()
+        original_replace = os.replace
+        def fail_manifest(source, target):
+            if str(target).endswith(".setupsmith/manifest.json"):
+                raise OSError("injected manifest failure")
+            return original_replace(source, target)
+        with patch.object(SETUPSMITH.os, "replace", side_effect=fail_manifest):
+            code, output = self.run_adopt((".agents/skills/guide=skills/guide",), "INSTALL\n")
+        self.assertEqual(code, 2)
+        self.assertIn("injected manifest failure", output)
+        self.assertEqual(self.project_file_snapshot(), before)
+        self.assertFalse((self.project / ".setupsmith").exists())
+
+    def test_issue_11_schema_one_manifest_remains_verified_and_compatible(self):
+        code, output = self.run_install("INSTALL\n", assistants=("codex",))
+        self.assertEqual(code, 0, output)
+        manifest_path = self.project / ".setupsmith/manifest.json"
+        manifest_before = json.loads(manifest_path.read_text())
+        self.assertNotIn("baseline_state", manifest_before["artifacts"][0])
+        code, output = self.run_adopt((".agents/skills/guide=skills/guide",), "INSTALL\n")
+        self.assertEqual(code, 0, output)
+        self.assertIn("no files or manifest rewritten", output)
+        manifest_after = json.loads(manifest_path.read_text())
+        self.assertEqual(manifest_after, manifest_before)
 
 
 if __name__ == "__main__":

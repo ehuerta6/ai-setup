@@ -2,6 +2,7 @@
 """Discover catalog artifacts and install explicitly selected skills from Git sources."""
 
 import argparse
+import copy
 import hashlib
 import json
 import os
@@ -295,10 +296,16 @@ def load_manifest(path: Path) -> dict:
         raise InstallError(f"cannot read manifest {path}: {exc}") from exc
     if not isinstance(value, dict) or value.get("schema_version") != 1 or not isinstance(value.get("artifacts"), list):
         raise InstallError("unsupported or invalid .setupsmith/manifest.json")
+    artifact_ids = set()
+    owned_paths = set()
     for entry in value["artifacts"]:
         if not isinstance(entry, dict) or not re.fullmatch(r"skills/[a-z0-9]+(?:-[a-z0-9]+)*", str(entry.get("id", ""))):
             raise InstallError("manifest contains an invalid artifact identity")
-        for key in ("source", "configured_ref", "revision", "content_digest"):
+        artifact_id = entry["id"]
+        if artifact_id in artifact_ids:
+            raise InstallError(f"manifest contains duplicate artifact ownership: {artifact_id}")
+        artifact_ids.add(artifact_id)
+        for key in ("source",):
             if not isinstance(entry.get(key), str) or not entry[key]:
                 raise InstallError(f"manifest artifact {entry['id']} has an invalid {key}")
         if Path(entry["source"]).is_absolute() or not (
@@ -309,9 +316,18 @@ def load_manifest(path: Path) -> dict:
             portable_source_locator(entry["source"])
         except InstallError as exc:
             raise InstallError(f"manifest artifact {entry['id']} has an invalid source locator") from exc
-        if not re.fullmatch(r"[0-9a-f]{40,64}", entry["revision"]):
+        baseline_state = entry.get("baseline_state", "verified")
+        if not isinstance(baseline_state, str) or baseline_state not in {"verified", "unknown"}:
+            raise InstallError(f"manifest artifact {entry['id']} has an invalid baseline or adoption state")
+        if baseline_state == "unknown":
+            configured_ref = entry.get("configured_ref")
+            if (entry.get("revision") is not None
+                    or configured_ref is not None and (not isinstance(configured_ref, str) or not configured_ref)):
+                raise InstallError(f"unknown-baseline artifact {entry['id']} has fabricated verified provenance")
+        elif (not isinstance(entry.get("configured_ref"), str) or not entry["configured_ref"]
+              or not isinstance(entry.get("revision"), str) or not re.fullmatch(r"[0-9a-f]{40,64}", entry["revision"])):
             raise InstallError(f"manifest artifact {entry['id']} has an invalid source revision")
-        if not re.fullmatch(r"[0-9a-f]{64}", entry["content_digest"]):
+        if not isinstance(entry.get("content_digest"), str) or not re.fullmatch(r"[0-9a-f]{64}", entry["content_digest"]):
             raise InstallError(f"manifest artifact {entry['id']} has an invalid content digest")
         files = entry.get("files")
         if not isinstance(files, dict) or not files:
@@ -320,8 +336,9 @@ def load_manifest(path: Path) -> dict:
             if not isinstance(relative, str):
                 raise InstallError(f"manifest artifact {entry['id']} contains an invalid file path")
             file_path = PurePosixPath(relative)
-            if (file_path.is_absolute() or ".." in file_path.parts or "\\" in relative
-                    or not re.fullmatch(r"[0-9a-f]{64}", str(digest))):
+            if (file_path.is_absolute() or file_path.as_posix() != relative or ".." in file_path.parts
+                    or "\\" in relative or any(ord(character) < 32 for character in relative)
+                    or not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest)):
                 raise InstallError(f"manifest artifact {entry['id']} contains an unsafe file baseline")
         targets = entry.get("targets")
         if not isinstance(targets, list) or not targets:
@@ -333,13 +350,281 @@ def load_manifest(path: Path) -> dict:
             relative_path = target.get("path")
             if not isinstance(assistant, str) or not isinstance(relative_path, str):
                 raise InstallError(f"manifest artifact {entry['id']} contains an invalid target")
-            expected_prefix = {"codex": ".agents/skills", "claude-code": ".claude/skills"}.get(assistant)
+            target_adoption = target.get("adoption", "installed")
+            if not isinstance(target_adoption, str) or target_adoption not in {"installed", "adopted"}:
+                raise InstallError(f"manifest artifact {entry['id']} contains an invalid target adoption state")
+            expected_prefix = {"codex": ".agents/skills", "claude-code": ".claude/skills",
+                               "codex-legacy": ".codex/skills", "legacy": ".ai/skills"}.get(assistant)
             target_path = PurePosixPath(relative_path)
-            if (not expected_prefix or target_path.is_absolute() or ".." in target_path.parts or "\\" in relative_path
-                    or target_path.as_posix() != f"{expected_prefix}/{entry['id'].split('/', 1)[1]}"
-                    or target.get("state") != "installed"):
+            basename = target_path.name
+            expected_path = f"{expected_prefix}/{entry['id'].split('/', 1)[1]}" if expected_prefix else None
+            safe_relative_path = bool(expected_prefix) and (
+                not target_path.is_absolute()
+                and target_path.as_posix() == relative_path
+                and len(target_path.parts) == 3
+                and target_path.parts[:2] == tuple(expected_prefix.split("/"))
+            )
+            safe_basename = bool(re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", basename)) and not basename.endswith(".")
+            if (not expected_prefix or not safe_relative_path or not safe_basename
+                    or target.get("state") != "installed"
+                    or (target_adoption == "installed" and relative_path != expected_path)):
                 raise InstallError(f"manifest artifact {entry['id']} contains an unsafe target")
+            if relative_path in owned_paths:
+                raise InstallError(f"manifest contains duplicate target ownership: {relative_path}")
+            owned_paths.add(relative_path)
+        if baseline_state == "unknown" and any(target.get("adoption", "installed") != "adopted" for target in targets):
+            raise InstallError(f"unknown-baseline artifact {entry['id']} contains a non-adopted target")
     return value
+
+
+def candidate_directories(root: Path) -> tuple[list[dict], list[str]]:
+    """List direct skill directories at supported native and explicitly legacy layouts."""
+    layouts = ((".agents/skills", "codex", True), (".claude/skills", "claude-code", True),
+               (".codex/skills", "codex-legacy", False), (".ai/skills", "legacy", False))
+    candidates = []
+    warnings = []
+    for prefix, assistant, native in layouts:
+        base = root / prefix
+        if base.is_symlink():
+            warnings.append(f"{prefix}/ is a symlink; not inspected")
+            continue
+        if not base.is_dir():
+            continue
+        for directory in sorted(base.iterdir()):
+            relative = directory.relative_to(root).as_posix()
+            if directory.is_symlink():
+                warnings.append(f"{relative} is a symlink; not inspected")
+                continue
+            if not directory.is_dir():
+                continue
+            try:
+                digest, hashes, _ = tree_identity(directory)
+                metadata_errors = validate_skill_metadata(directory / "SKILL.md", directory.name)
+                candidates.append({"path": relative, "assistant": assistant, "native": native,
+                                   "name": directory.name, "content_digest": digest, "files": hashes,
+                                   "metadata_errors": metadata_errors})
+            except (InstallError, OSError) as exc:
+                warnings.append(f"{relative}: cannot safely identify content ({exc})")
+    return candidates, warnings
+
+
+def parse_mapping(value: str) -> tuple[str, str]:
+    if "=" not in value:
+        raise InstallError("each --map must be EXISTING_RELATIVE_PATH=skills/canonical-name")
+    path, artifact_id = value.split("=", 1)
+    original_path = path
+    path = PurePosixPath(path)
+    basename = path.name
+    if (path.is_absolute() or ".." in path.parts or "\\" in value or path.as_posix() != original_path
+            or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", basename) or basename.endswith(".")
+            or str(path) not in {f"{prefix}/{basename}" for prefix in
+                                 (".agents/skills", ".claude/skills", ".codex/skills", ".ai/skills")} or
+            not re.fullmatch(r"skills/[a-z0-9]+(?:-[a-z0-9]+)*", artifact_id)):
+        raise InstallError(f"unsafe or invalid adoption mapping: {value}")
+    return path.as_posix(), artifact_id
+
+
+def adopt(args: argparse.Namespace) -> int:
+    if not sys.stdin.isatty() and not args.preview_only:
+        raise InstallError("interactive confirmation is required; rerun in a terminal (or use --preview-only)")
+    source_locator = portable_source_locator(args.source)
+    project_arg = Path(args.project).expanduser()
+    if not project_arg.is_dir():
+        raise InstallError(f"target project does not exist: {args.project}")
+    try:
+        root = Path(git("rev-parse", "--show-toplevel", cwd=project_arg)).resolve()
+    except DiscoveryError as exc:
+        raise InstallError("target must be inside a Git project") from exc
+    manifest_rel = Path(".setupsmith") / "manifest.json"
+    ensure_no_symlink_components(root, manifest_rel)
+    manifest_path = root / manifest_rel
+    manifest = load_manifest(manifest_path)
+    candidates, warnings = candidate_directories(root)
+    by_path = {candidate["path"]: candidate for candidate in candidates}
+    def reject_conflict(message: str) -> None:
+        print("SetupSmith adoption preview")
+        print(f"Conflict: {message}")
+        print("Proposed manifest entries: none. Project skill files and manifest remain unchanged.")
+        raise InstallError(message)
+
+    if len(set(args.mapping)) != len(args.mapping):
+        reject_conflict("each existing installation may be mapped only once")
+    mappings = [parse_mapping(item) for item in args.mapping]
+
+    with tempfile.TemporaryDirectory(prefix="setupsmith-adopt-source-") as temporary:
+        source_root = Path(temporary) / "source"
+        source_error = None
+        configured = args.ref
+        revision = None
+        canonical = {}
+        try:
+            configured, revision, default_ref = resolve_source(args.source, args.ref, source_root)
+            report = discover(source_root, source_locator, configured, revision, default_ref)
+            canonical = {item["id"]: item for item in report["artifacts"] if item["type"] == "skills"}
+        except DiscoveryError as exc:
+            source_error = str(exc)
+
+        if not mappings:
+            print("SetupSmith adoption candidates (read-only)")
+            print(f"Configured source: {source_locator}; ref: {configured or 'unresolved'}")
+            print(f"Source evidence: {revision or ('unavailable: ' + source_error if source_error else 'unavailable')}")
+            for candidate in candidates:
+                matches = [artifact_id for artifact_id in sorted(canonical)
+                           if candidate["files"] == tree_identity(source_root / artifact_id)[1]] if canonical else []
+                name_candidate = f"skills/{candidate['name']}"
+                duplicates = [item["path"] for item in candidates
+                              if item["path"] != candidate["path"]
+                              and item["content_digest"] == candidate["content_digest"]]
+                entry = next((item for item in manifest["artifacts"]
+                              if any(target.get("path") == candidate["path"] for target in item.get("targets", []))), None)
+                print(f"- {candidate['path']} ({candidate['assistant']}, "
+                      f"{'native' if candidate['native'] else 'legacy/non-native'}): "
+                      f"digest {candidate['content_digest']}; canonical candidates "
+                      f"{', '.join(matches) if matches else name_candidate + ' (name/path only; unverified)'}; "
+                      f"ownership {entry['id'] if entry else 'unmanaged'}; "
+                      f"match confidence {'high (full tree)' if matches else 'low (name only)'}; "
+                      f"potential content duplicates {', '.join(duplicates) if duplicates else 'none'}; "
+                      f"map explicitly with --map")
+            for warning in warnings:
+                print(f"Warning: {warning}")
+            return 0
+
+        mapped_paths = [path for path, _ in mappings]
+        if len(set(mapped_paths)) != len(mapped_paths):
+            reject_conflict("duplicate existing paths in adoption mappings")
+        records = []
+        # Keep the loaded snapshot unchanged for stale-preview comparison. In
+        # particular, targets are nested mutable lists that planning may extend.
+        proposed = {entry["id"]: copy.deepcopy(entry) for entry in manifest["artifacts"]}
+        for path, artifact_id in mappings:
+            candidate = by_path.get(path)
+            if candidate is None:
+                reject_conflict(f"mapped installation was not safely discovered: {path}")
+            ensure_no_symlink_components(root, Path(path))
+            if candidate["metadata_errors"]:
+                reject_conflict(f"mapped skill {path} has invalid metadata: " + "; ".join(candidate["metadata_errors"]))
+            previous_owner = next((entry for entry in manifest["artifacts"]
+                                   if any(target.get("path") == path for target in entry.get("targets", []))), None)
+            existing_entry = proposed.get(artifact_id)
+            if previous_owner and previous_owner["id"] != artifact_id:
+                reject_conflict(f"{path} is already managed by {previous_owner['id']}")
+            source_candidate = source_root / artifact_id
+            source_available = artifact_id in canonical and source_candidate.is_dir()
+            verified = source_available and candidate["files"] == tree_identity(source_candidate)[1]
+            if existing_entry:
+                state = existing_entry.get("baseline_state", "verified")
+                hashes_match = existing_entry.get("files") == candidate["files"]
+                canonical_match = source_available and candidate["files"] == tree_identity(source_candidate)[1]
+                same_source = (existing_entry.get("source") == source_locator
+                               and existing_entry.get("configured_ref") == configured)
+                same_revision = state == "unknown" or existing_entry.get("revision") == revision
+                compatible = hashes_match and same_source and same_revision and (
+                    canonical_match if state == "verified" else True)
+                if not compatible:
+                    reject_conflict(f"already-managed artifact has incompatible baseline or observed content: {path}")
+                target_exists = any(target.get("path") == path for target in existing_entry.get("targets", []))
+                if not previous_owner and not target_exists:
+                    existing_entry["baseline_state"] = state
+                    existing_entry["targets"].append({"assistant": candidate["assistant"], "path": path,
+                                                       "state": "installed", "adoption": "adopted"})
+                    existing_entry["targets"].sort(key=lambda item: item["path"])
+                records.append({"path": path, "artifact_id": artifact_id, "candidate": candidate,
+                                "verified": state == "verified", "existing": target_exists})
+                continue
+            baseline = {"id": artifact_id, "source": source_locator, "configured_ref": configured if revision else args.ref,
+                        "revision": revision if verified else None,
+                        "content_digest": tree_identity(root / path)[0], "files": candidate["files"],
+                        "baseline_state": "verified" if verified else "unknown",
+                        "targets": [{"assistant": candidate["assistant"], "path": path, "state": "installed",
+                                     "adoption": "adopted"}]}
+            records.append({"path": path, "artifact_id": artifact_id, "candidate": candidate,
+                            "verified": verified, "existing": False})
+            proposed[artifact_id] = baseline
+
+        print("SetupSmith adoption preview")
+        print(f"Source: {source_locator}\nConfigured ref: {configured or 'unresolved'}\n"
+              f"Resolved immutable revision: {revision or 'none (unknown baseline)'}")
+        for record in records:
+            candidate = record["candidate"]
+            state = "already managed (no-op)" if record["existing"] else (
+                "verified content baseline" if record["verified"] else "unknown historical baseline")
+            print(f"- {record['path']} → {record['artifact_id']} [{candidate['assistant']}; {state}; "
+                  f"match confidence {'high (full tree)' if record['verified'] else 'explicit mapping only'}; "
+                  f"sha256 {candidate['content_digest']}; manifest ownership "
+                  f"{'already recorded' if record['existing'] else 'new selected target'}]")
+            print(f"  Existing files unchanged: {len(candidate['files'])} file(s) under {record['path']}/")
+        selected_paths = {record["path"] for record in records}
+        unselected = sorted(set(by_path) - selected_paths)
+        if unselected:
+            print("Unselected candidates remain unmanaged: " + ", ".join(unselected))
+        if source_error:
+            print(f"Source evidence unavailable: {source_error}")
+        if warnings:
+            print("Other candidates/warnings: " + "; ".join(warnings))
+        print("Project skill files: unchanged; only selected manifest entries may be added.")
+        updated = {"schema_version": 1, "artifacts": sorted(proposed.values(), key=lambda item: item["id"])}
+        print("Proposed manifest entries:")
+        print(json.dumps([proposed[record["artifact_id"]] for record in records], indent=2, sort_keys=True))
+        if args.preview_only:
+            print("Preview only; no project files changed.")
+            return 0
+        answer = input("Type INSTALL to record exactly these mappings, or anything else to decline: ")
+        if answer != "INSTALL":
+            print("Declined; no project files changed.")
+            return 0
+
+        if revision:
+            recheck = Path(temporary) / "recheck"
+            try:
+                latest_ref, latest_revision, _ = resolve_source(args.source, args.ref, recheck)
+            except DiscoveryError as exc:
+                raise InstallError(f"stale preview: source became unavailable ({exc})") from exc
+            if latest_ref != configured or latest_revision != revision:
+                raise InstallError("stale preview: source revision changed; preview again")
+        ensure_no_symlink_components(root, manifest_rel)
+        if load_manifest(manifest_path) != manifest:
+            raise InstallError("stale preview: manifest changed; preview again")
+        latest_candidates, _ = candidate_directories(root)
+        latest_by_path = {item["path"]: item for item in latest_candidates}
+        for record in records:
+            path = record["path"]
+            ensure_no_symlink_components(root, Path(path))
+            if path not in latest_by_path or latest_by_path[path]["files"] != record["candidate"]["files"]:
+                raise InstallError(f"stale preview: adopted files changed: {path}")
+        changed = [record for record in records if not record["existing"]]
+        if not changed:
+            print("Already managed and unchanged; no files or manifest rewritten.")
+            return 0
+        manifest_dir = root / ".setupsmith"
+        manifest_dir_preexisted = manifest_dir.exists()
+        manifest_dir.mkdir(exist_ok=True)
+        data = (json.dumps(updated, indent=2, sort_keys=True) + "\n").encode("utf-8")
+        descriptor, temporary_name = tempfile.mkstemp(prefix=".manifest-", suffix=".tmp", dir=manifest_dir)
+        temporary_manifest = Path(temporary_name)
+        try:
+            with os.fdopen(descriptor, "wb") as output:
+                output.write(data)
+                output.flush()
+                os.fsync(output.fileno())
+            ensure_no_symlink_components(root, manifest_rel)
+            os.replace(temporary_manifest, manifest_path)
+        except OSError as exc:
+            cleanup_failures = []
+            try:
+                temporary_manifest.unlink(missing_ok=True)
+            except OSError as cleanup_error:
+                cleanup_failures.append(f"could not remove manifest staging file: {cleanup_error}")
+            if not manifest_dir_preexisted:
+                try:
+                    manifest_dir.rmdir()
+                except FileNotFoundError:
+                    pass
+                except OSError as cleanup_error:
+                    cleanup_failures.append(f"could not remove empty manifest directory: {cleanup_error}")
+            detail = "; " + "; ".join(cleanup_failures) if cleanup_failures else ""
+            raise InstallError(f"adoption failed while writing manifest; skill contents were preserved: {exc}{detail}") from exc
+        print("Adopted existing skills without changing their files.")
+        return 0
 
 
 def file_hashes_on_disk(directory: Path) -> dict[str, str]:
@@ -539,10 +824,12 @@ def install(args: argparse.Namespace) -> int:
                 for target, relative, _, _ in plan["destinations"]:
                     if not any(item.get("assistant") == target and item.get("path") == relative.as_posix() for item in targets):
                         targets.append({"assistant": target, "path": relative.as_posix(), "state": "installed"})
-                entries.append({"id": plan["artifact_id"], "source": source_locator,
-                                "configured_ref": configured, "revision": revision,
-                                "content_digest": plan["digest"], "files": plan["hashes"],
-                                "targets": sorted(targets, key=lambda item: item["assistant"])})
+                entry = dict(plan["existing_entry"] or {})
+                entry.update({"id": plan["artifact_id"], "source": source_locator,
+                              "configured_ref": configured, "revision": revision,
+                              "content_digest": plan["digest"], "files": plan["hashes"],
+                              "targets": sorted(targets, key=lambda item: item["assistant"])})
+                entries.append(entry)
             changed_ids = {entry["id"] for entry in entries}
             artifacts = [item for item in manifest["artifacts"] if item.get("id") not in changed_ids]
             artifacts.extend(entries)
@@ -589,7 +876,7 @@ def install(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Discover and install selected SetupSmith catalog skills")
+    parser = argparse.ArgumentParser(description="Discover, install, and adopt SetupSmith catalog skills")
     sub = parser.add_subparsers(dest="command", required=True)
     command = sub.add_parser("discover", help="discover catalog artifacts from a Git source")
     command.add_argument("--source", required=True, help="Git repository locator")
@@ -602,11 +889,20 @@ def main(argv: list[str] | None = None) -> int:
                                  help="assistant target; repeat to select both")
     install_command.add_argument("--project", required=True, help="existing target Git project")
     install_command.add_argument("--preview-only", action="store_true", help="show the plan without prompting or writing")
+    adopt_command = sub.add_parser("adopt", help="inspect and explicitly adopt existing project skill directories")
+    adopt_command.add_argument("--source", required=True, help="canonical Git repository locator")
+    adopt_command.add_argument("--ref", help="configured branch, tag, or revision; defaults to source branch")
+    adopt_command.add_argument("--project", required=True, help="existing target Git project")
+    adopt_command.add_argument("--map", dest="mapping", action="append", default=[], metavar="PATH=skills/ID",
+                               help="explicitly map an existing relative directory to a canonical skill identity")
+    adopt_command.add_argument("--preview-only", action="store_true", help="show the plan without prompting or writing")
     args = parser.parse_args(argv)
     try:
         validate_source_argument(args.source)
         if args.command == "install":
             return install(args)
+        if args.command == "adopt":
+            return adopt(args)
         with tempfile.TemporaryDirectory(prefix="setupsmith-discovery-") as temporary:
             root = Path(temporary) / "source"
             configured, revision, default = resolve_source(args.source, args.ref, root)
