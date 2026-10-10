@@ -2,7 +2,7 @@
 
 A reusable catalog of skills, agents, rules, templates, and Project Instructions, with guided setup and deterministic project-local skill installation for AI coding assistants.
 
-**Available now:** the configuration catalog, manual adoption workflows, read-only CLI catalog discovery, explicitly approved selective skill installation, adoption, updates, restoration, and removal, and read-only managed-skill checks/diffs. Automatic synchronization is not implemented. See the [MVP specification](docs/setupsmith-mvp.md) and [managed installation guide](docs/managed-skill-installation.md).
+**Available now:** the configuration catalog, manual adoption workflows, read-only CLI catalog discovery and managed-skill checks/diffs, explicitly approved selective skill installation, adoption, updates, restoration, and removal, and `setup-ai` guided Analyze → Recommend → Install → on-demand Sync through the CLI. Analysis and recommendations remain read-only without the CLI; Sync is user-initiated and explicitly approved. Background synchronization is not implemented. See the [MVP specification](docs/setupsmith-mvp.md) and [managed installation guide](docs/managed-skill-installation.md).
 
 Browse this README to find configuration. Use [WORKFLOWS.md](WORKFLOWS.md) to choose a process for a specific task.
 
@@ -14,7 +14,7 @@ Projects can adopt only what they need. Keep product behavior, architecture, and
 - **Adopt configuration into a project today:** inspect its AI instructions, architecture, stack, Git workflow, and conventions. Then follow the manual Project adoption route in [WORKFLOWS.md](WORKFLOWS.md) and copy only the selected canonical files. For example, add `skills/firebase/SKILL.md` only to a project that uses Firebase, and keep product-specific instructions there.
 - **Set up a multi-chat workspace:** choose a Project Instructions preset below and tailor it with `skills/ai-config-builder/SKILL.md`.
 - **Discover catalog artifacts:** run `python3 scripts/setupsmith.py discover --source https://github.com/ehuerta6/setupsmith.git`. It defaults to the Git source's advertised default branch; use `--ref <branch-or-tag-or-revision>` to select another ref. This command is read-only with respect to the target project and reports its resolved commit.
-- **Analyze a project:** install only `skills/setup-ai/SKILL.md` using your assistant's supported skill mechanism, then invoke it as `$setup-ai` or select it from `/skills` in Codex, or as `/setup-ai` in Claude Code. The skill inspects and recommends only; it does not install or edit project files. Codex native discovery and invocation were checked for this skill; Claude Code runtime discovery is unavailable in the current environment.
+- **Analyze a project:** install only `skills/setup-ai/SKILL.md` using your assistant's supported skill mechanism, then invoke it as `$setup-ai` or select it from `/skills` in Codex, or as `/setup-ai` in Claude Code. Analysis and recommendations remain read-only and work without a preinstalled CLI. When a verified CLI checkout is available, the skill can preview selected skill installation and guide on-demand check, diff, and explicitly approved updates through the CLI. Restore and remove are explicit CLI operations. Codex native discovery and invocation were checked for this skill; Claude Code runtime discovery is unavailable in the current environment.
 
 The catalog below lists each artifact's canonical path and purpose.
 
