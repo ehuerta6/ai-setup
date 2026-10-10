@@ -1,6 +1,6 @@
 # Workflows
 
-Scenario-based guide for using the existing SetupSmith configuration catalog. The CLI supports read-only catalog discovery and managed-skill checks/diffs, plus explicitly approved project-local skill installation, adoption of existing skills, selective updates, restoration from a committed manifest, and managed removal. `setup-ai` guides Analyze → Recommend → Install → on-demand Sync through the CLI. Sync is user-initiated and explicitly approved; background synchronization is not implemented.
+Scenario-based guide for using the existing SetupSmith configuration catalog. The CLI supports read-only catalog discovery and managed-skill checks/diffs, plus explicitly approved project-local skill installation, adoption of existing skills, selective updates, restoration from a committed manifest, and managed removal. `setup-ai` guides Analyze → Recommend → Install → on-demand Sync through the CLI. Sync runs only on request, and every managed write requires the CLI's interactive approval; background synchronization is not implemented.
 
 These routes are suggestions, not a required sequence. Use only the steps that help with the task. For a single reusable workflow, load its skill; for durable multi-chat context, start from a Project Instruction preset.
 

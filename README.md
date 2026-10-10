@@ -2,7 +2,7 @@
 
 A reusable catalog of skills, agents, rules, templates, and Project Instructions, with guided setup and deterministic project-local skill installation for AI coding assistants.
 
-**Available now:** the configuration catalog, manual adoption workflows, read-only CLI catalog discovery and managed-skill checks/diffs, explicitly approved selective skill installation, adoption, updates, restoration, and removal, and `setup-ai` guided Analyze → Recommend → Install → on-demand Sync through the CLI. Analysis and recommendations remain read-only without the CLI; Sync is user-initiated and explicitly approved. Background synchronization is not implemented. See the [MVP specification](docs/setupsmith-mvp.md) and [managed installation guide](docs/managed-skill-installation.md).
+**Available now:** the configuration catalog, manual adoption workflows, read-only CLI catalog discovery and managed-skill checks/diffs, explicitly approved selective skill installation, adoption, updates, restoration, and removal, and `setup-ai` guided Analyze → Recommend → Install → on-demand Sync through the CLI. Analysis and recommendations remain read-only without the CLI. Sync runs only on request, and every managed write requires the CLI's interactive approval. Background synchronization is not implemented. See the [MVP specification](docs/setupsmith-mvp.md) and [managed installation guide](docs/managed-skill-installation.md).
 
 Browse this README to find configuration. Use [WORKFLOWS.md](WORKFLOWS.md) to choose a process for a specific task.
 
