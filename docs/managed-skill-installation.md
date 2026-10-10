@@ -185,4 +185,4 @@ The checker accepts the shared schema-1 contract for explicit adoption. Existing
 - Repeating an unchanged installation is a no-op, including no manifest rewrite.
 - Installation refuses a managed skill whose files have changed; `check` reports `LOCAL_DIVERGENCE` and `diff` shows the changes without repairing them.
 - Local source paths are accepted only when their Git repository has a credential-free portable `origin` URL; that URL is what the manifest records.
-- Global installation and background synchronization are out of scope. Advanced multi-target update recovery is tracked separately.
+- Global installation and background synchronization are out of scope.
