@@ -1,6 +1,8 @@
-# AI Setup
+# SetupSmith
 
-Reusable configuration for AI-assisted software engineering, with selected workflows for research, writing, learning, and multi-chat workspaces.
+A reusable catalog of skills, agents, rules, templates, and Project Instructions, with a planned guided setup and safe synchronization workflow for AI coding assistants.
+
+**Available now:** the configuration catalog and manual adoption workflows below. **In design, not yet implemented:** the `/setup-ai` onboarding skill and SetupSmith CLI for Analyze → Recommend → Install → Sync. See [the MVP specification](docs/SPEC.md).
 
 Browse this README to find configuration. Use [WORKFLOWS.md](WORKFLOWS.md) to choose a process for a specific task.
 
@@ -9,7 +11,7 @@ Projects can adopt only what they need. Keep product behavior, architecture, and
 ## Quick start
 
 - **Choose a workflow:** start with the scenario router in [WORKFLOWS.md](WORKFLOWS.md), then load the relevant skills.
-- **Adopt configuration into a project:** inspect its AI instructions, architecture, stack, Git workflow, and conventions. Then follow the Project adoption route in [WORKFLOWS.md](WORKFLOWS.md) and copy only the selected canonical files. For example, add `skills/firebase/SKILL.md` only to a project that uses Firebase, and keep product-specific instructions there.
+- **Adopt configuration into a project today:** inspect its AI instructions, architecture, stack, Git workflow, and conventions. Then follow the manual Project adoption route in [WORKFLOWS.md](WORKFLOWS.md) and copy only the selected canonical files. For example, add `skills/firebase/SKILL.md` only to a project that uses Firebase, and keep product-specific instructions there.
 - **Set up a multi-chat workspace:** choose a Project Instructions preset below and tailor it with `skills/ai-config-builder/SKILL.md`.
 
 The catalog below lists each artifact's canonical path and purpose.
