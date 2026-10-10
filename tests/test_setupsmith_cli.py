@@ -19,7 +19,10 @@ class CatalogDiscoveryTests(unittest.TestCase):
             encoding="utf-8",
         )
         (self.root / "skills" / "guide" / "references").mkdir(parents=True)
-        (self.root / "skills" / "guide" / "SKILL.md").write_text("---\nname: guide\n---\n", encoding="utf-8")
+        (self.root / "skills" / "guide" / "SKILL.md").write_text(
+            "---\nname: guide\ndescription: A guide skill for discovery tests.\n---\n",
+            encoding="utf-8",
+        )
         (self.root / "skills" / "guide" / "references" / "detail.md").write_text("resource", encoding="utf-8")
         (self.root / "agents").mkdir()
         (self.root / "agents" / "helper.md").write_text("agent", encoding="utf-8")
@@ -102,6 +105,29 @@ class CatalogDiscoveryTests(unittest.TestCase):
         self.assertFalse(report["complete"])
         self.assertTrue(any("missing SKILL.md" in error for error in report["errors"]))
         self.assertTrue(any("invalid status" in warning for warning in report["warnings"]))
+
+    def test_invalid_skill_metadata_is_reported_as_incomplete(self):
+        skill_file = self.root / "skills" / "guide" / "SKILL.md"
+        cases = [
+            ("missing frontmatter", "name: guide\ndescription: Missing delimiters.\n", "frontmatter"),
+            ("unclosed frontmatter", "---\nname: guide\ndescription: Missing closing delimiter.\n", "unclosed"),
+            ("missing description", "---\nname: guide\n---\n", "description field"),
+            ("mismatched name", "---\nname: other\ndescription: Mismatched directory.\n---\n", "does not match directory"),
+            ("invalid name", "---\nname: Guide\ndescription: Invalid naming.\n---\n", "naming requirements"),
+        ]
+        for label, content, expected_error in cases:
+            with self.subTest(label=label):
+                skill_file.write_text(content, encoding="utf-8")
+                self.git("add", "skills/guide/SKILL.md")
+                self.git("commit", "-qm", label)
+                code, report = self.run_discovery()
+                self.assertEqual(code, 2, report)
+                self.assertFalse(report["complete"])
+                self.assertNotIn("skills/guide", {item["id"] for item in report["artifacts"]})
+                self.assertTrue(any(
+                    "invalid skill metadata guide" in error and expected_error in error
+                    for error in report["errors"]
+                ), report["errors"])
 
     def test_invalid_ref_and_unavailable_source_are_errors(self):
         code, report = self.run_discovery("--ref", "missing-ref")

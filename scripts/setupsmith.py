@@ -14,6 +14,38 @@ class DiscoveryError(Exception):
     pass
 
 
+def validate_skill_metadata(path: Path, directory_name: str) -> list[str]:
+    """Validate the required Agent Skills fields using catalog conventions."""
+    try:
+        content = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as exc:
+        return [f"cannot read {path.name}: {exc}"]
+
+    if not content.startswith("---\n"):
+        return ["missing YAML frontmatter"]
+    parts = content.split("---\n", 2)
+    if len(parts) < 3:
+        return ["unclosed YAML frontmatter"]
+
+    metadata = parts[1]
+    errors = []
+    name = re.search(r"^name:\s*([^\s#]+)\s*$", metadata, re.M)
+    description = re.search(r"^description:\s*(.*?)\s*$", metadata, re.M)
+    if not name:
+        errors.append("missing or invalid name field")
+    else:
+        skill_name = name.group(1)
+        if len(skill_name) > 64 or not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", skill_name):
+            errors.append("name does not meet Agent Skills naming requirements")
+        if skill_name != directory_name:
+            errors.append(f"name '{skill_name}' does not match directory '{directory_name}'")
+    if not description or not description.group(1):
+        errors.append("missing valid description field")
+    elif len(description.group(1)) > 1024:
+        errors.append("description exceeds 1024 characters")
+    return errors
+
+
 def scalar_without_yaml_comment(value: str) -> str:
     """Remove a YAML comment without treating a # inside quotes as a comment."""
     quote = None
@@ -144,6 +176,10 @@ def discover(root: Path, source: str, configured_ref: str, commit: str, default_
                 skill_file = child / "SKILL.md"
                 if not skill_file.is_file():
                     errors.append(f"invalid skill {child.name}: missing SKILL.md")
+                    continue
+                metadata_errors = validate_skill_metadata(skill_file, child.name)
+                if metadata_errors:
+                    errors.extend(f"invalid skill metadata {child.name}: {error}" for error in metadata_errors)
                     continue
                 resources = []
                 for path in child.rglob("*"):
