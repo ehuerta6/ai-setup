@@ -130,11 +130,12 @@ To reproduce, clone the two project SHAs above into disposable directories, boot
 The following uses `$T` for a temporary parent directory and assumes the SetupSmith checkout is `$T/setupsmith`, the disposable projects are `$T/cappy-code` and `$T/cappy-hub`, and the catalog mirror is `$T/catalog-fixture`. Create those clones first. Create the catalog mirror and configure its local author before the first CLI call. Before CLI commands that read the catalog, scope Git URL rewriting to the shell:
 
 ```sh
-export GIT_CONFIG_COUNT=1
 export T=/private/tmp/setupsmith-repro
 git clone --local "$T/setupsmith" "$T/catalog-fixture"
+git -C "$T/catalog-fixture" switch -C main 1a09dd426cba92745a6eaa3a07e67aef2d20e657
 git -C "$T/catalog-fixture" config user.name 'SetupSmith Validation Fixture'
 git -C "$T/catalog-fixture" config user.email 'validation-fixture@example.invalid'
+export GIT_CONFIG_COUNT=1
 export GIT_CONFIG_KEY_0="url.file://$T/catalog-fixture/.insteadOf"
 export GIT_CONFIG_VALUE_0='https://github.com/ehuerta6/setupsmith.git'
 cd "$T/setupsmith"
@@ -146,21 +147,15 @@ python3 scripts/setupsmith.py adopt --source https://github.com/ehuerta6/setupsm
 python3 scripts/setupsmith.py adopt --source https://github.com/ehuerta6/setupsmith.git --ref refs/heads/main --project "$T/cappy-hub" --map .agents/skills/setup-ai=skills/setup-ai
 python3 scripts/setupsmith.py install --source https://github.com/ehuerta6/setupsmith.git --ref refs/heads/main --skill audit-ai-config --assistant codex --project "$T/cappy-hub" --preview-only
 python3 scripts/setupsmith.py install --source https://github.com/ehuerta6/setupsmith.git --ref refs/heads/main --skill audit-ai-config --assistant codex --project "$T/cappy-hub"
-python3 scripts/setupsmith.py install --source https://github.com/ehuerta6/setupsmith.git --ref refs/heads/main --skill audit-ai-config --assistant claude-code --project "$T/cappy-hub"
 python3 scripts/setupsmith.py check --project "$T/cappy-hub"
 python3 scripts/setupsmith.py diff --project "$T/cappy-hub" --skill audit-ai-config
-python3 scripts/setupsmith.py update --project "$T/cappy-hub" --all-safe --preview-only
-python3 scripts/setupsmith.py update --project "$T/cappy-hub" --skill audit-ai-config
-python3 scripts/setupsmith.py update --project "$T/cappy-hub" --none --preview-only
-python3 scripts/setupsmith.py restore --project "$T/restore-clone" --preview-only
-python3 scripts/setupsmith.py restore --project "$T/restore-clone"
-python3 scripts/setupsmith.py remove --project "$T/cappy-hub" --target skills/audit-ai-config=.agents/skills/audit-ai-config --preview-only
-python3 scripts/setupsmith.py remove --project "$T/cappy-hub" --target skills/audit-ai-config=.agents/skills/audit-ai-config
 ```
 
-Commands requiring approval were run with simulated `INSTALL`, `UPDATE`, `RESTORE`, or `REMOVE` answers in a disposable TTY. A declined answer and a noninteractive write were also attempted and verified to leave the clone unchanged. To exercise selective update at C, use `--skill audit-ai-config` first, then `--all-safe`; the first leaves setup-ai pinned at A and the second selects only setup-ai. At D, `--all-safe` excludes the removed audit skill. A direct network-source attempt without the Git rewrite returned `SOURCE_UNAVAILABLE`.
+The block above is the A-stage sequence only: it discovers, adopts, and installs at revision A, then checks and diffs. Commands requiring approval were run with simulated `INSTALL`, `UPDATE`, `RESTORE`, or `REMOVE` answers in a disposable TTY. A declined answer and a noninteractive write were also attempted and verified to leave the clone unchanged. A direct network-source attempt without the Git rewrite returned `SOURCE_UNAVAILABLE`.
 
 The mirror history was constructed as real commits. Starting at A, B appended `Validation fixture revision B: include supporting-resource and binary-file checks.` to the audit skill, added a support Markdown file containing `Revision B supporting reference.`, and wrote bytes `b'fixture-binary-revision-B' + bytes([0, 255])` to its binary resource. C changed `revision B` to `revision C` in the skill, appended `Validation fixture revision C: selective sync must preserve unselected artifacts.`, changed the reference to `Revision C supporting reference changed.`, changed the binary final byte from 255 to 254, and appended `Validation fixture revision C: independent second managed artifact changed.` to the setup-ai skill. D deleted the audit skill directory with `git rm -r`. These changes test text, new and changed support files, binary content, independent selections, and upstream removal without publishing fixture history.
+
+The B/C/D creation recipe was replayed in a fresh disposable clone at A. At A the audit skill contained only `SKILL.md`; after the recipe the `main` branch contained the B, C, and D commits in order and the fixture worktree was clean. The B step creates the previously absent `assets` directory before writing its binary resource.
 
 To recreate the mirror history, run this after the A-stage install/adoption commands (the commands that modify `$T/cappy-hub`):
 
@@ -174,13 +169,23 @@ audit = root / 'skills/audit-ai-config'
 skill = audit / 'SKILL.md'
 skill.write_text(skill.read_text() + '\n\nValidation fixture revision B: include supporting-resource and binary-file checks.\n')
 (audit / 'reference.md').write_text('Revision B supporting reference.\n')
+(audit / 'assets').mkdir(parents=True, exist_ok=True)
 (audit / 'assets/revision.bin').write_bytes(b'fixture-binary-revision-B' + bytes([0, 255]))
 PY
 git -C "$T/catalog-fixture" add skills/audit-ai-config
 git -C "$T/catalog-fixture" commit -m 'test: create controlled catalog revision B'
 ```
 
-Run the B-stage `check`, `diff`, and selected `update` commands above. Then create C, run the C-stage selective update commands, and snapshot the CLI-generated manifest into a fresh project before advancing to D:
+At B, run:
+
+```sh
+python3 scripts/setupsmith.py check --project "$T/cappy-hub"
+python3 scripts/setupsmith.py diff --project "$T/cappy-hub" --skill audit-ai-config
+python3 scripts/setupsmith.py update --project "$T/cappy-hub" --all-safe --preview-only
+python3 scripts/setupsmith.py update --project "$T/cappy-hub" --skill audit-ai-config
+```
+
+Then create C and run the C-stage checks and selective sync. `--all-safe --preview-only` is a preview showing setup-ai as the only remaining eligible update; leave it pinned at A for the restore fixture:
 
 ```sh
 python3 - "$T/catalog-fixture" <<'PY'
@@ -199,7 +204,20 @@ setup.write_text(setup.read_text() + '\nValidation fixture revision C: independe
 PY
 git -C "$T/catalog-fixture" add skills/audit-ai-config skills/setup-ai
 git -C "$T/catalog-fixture" commit -m 'test: create controlled catalog revision C'
-# Run C check/update commands, then prepare a clean project with the resulting manifest.
+```
+
+```sh
+python3 scripts/setupsmith.py check --project "$T/cappy-hub"
+python3 scripts/setupsmith.py diff --project "$T/cappy-hub" --skill audit-ai-config
+python3 scripts/setupsmith.py update --project "$T/cappy-hub" --skill audit-ai-config
+python3 scripts/setupsmith.py check --project "$T/cappy-hub"
+python3 scripts/setupsmith.py update --project "$T/cappy-hub" --all-safe --preview-only
+python3 scripts/setupsmith.py update --project "$T/cappy-hub" --none --preview-only
+```
+
+Prepare a fresh project with the CLI-generated manifest at C, while audit-ai-config is pinned at C and setup-ai remains pinned at A:
+
+```sh
 mkdir -p "$T/restore-seed/.setupsmith"
 cp "$T/cappy-hub/.setupsmith/manifest.json" "$T/restore-seed/.setupsmith/manifest.json"
 git -C "$T/restore-seed" init -b main
@@ -210,11 +228,29 @@ git -C "$T/restore-seed" commit -m 'test: seed pinned manifest for restore'
 git clone --local "$T/restore-seed" "$T/restore-clone"
 ```
 
-Run the restore preview/apply commands against `$T/restore-clone`; the mirror branch is at C, while the manifest pins A and C. Finally create D and run the D-stage check/update/remove commands:
+Run restore against that fresh clone before adding another target to CappyHub:
 
 ```sh
+python3 scripts/setupsmith.py restore --project "$T/restore-clone" --preview-only
+python3 scripts/setupsmith.py restore --project "$T/restore-clone"
+```
+
+Then install the Claude Code file target at C solely for the managed-sibling removal check. Finally create D and run the D-stage check/update/remove commands:
+
+```sh
+python3 scripts/setupsmith.py install --source https://github.com/ehuerta6/setupsmith.git --ref refs/heads/main --skill audit-ai-config --assistant claude-code --project "$T/cappy-hub"
 git -C "$T/catalog-fixture" rm -r skills/audit-ai-config
 git -C "$T/catalog-fixture" commit -m 'test: remove managed skill in controlled revision D'
+```
+
+At D, run:
+
+```sh
+python3 scripts/setupsmith.py check --project "$T/cappy-hub"
+python3 scripts/setupsmith.py diff --project "$T/cappy-hub" --skill audit-ai-config
+python3 scripts/setupsmith.py update --project "$T/cappy-hub" --all-safe --preview-only
+python3 scripts/setupsmith.py remove --project "$T/cappy-hub" --target skills/audit-ai-config=.agents/skills/audit-ai-config --preview-only
+python3 scripts/setupsmith.py remove --project "$T/cappy-hub" --target skills/audit-ai-config=.agents/skills/audit-ai-config
 ```
 
 This keeps all fixture commits local. The `discover`, install, update, restore, and remove CLI commands in the preceding sequence are run at the stated points in this order: A, B, C, restore snapshot at C, then D.
