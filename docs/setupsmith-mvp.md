@@ -2,7 +2,7 @@
 
 **Status:** Approved product scope; pending implementation and technical validation  
 **Date:** 2026-10-10  
-**Canonical repository:** [ehuerta6/setup-smith](https://github.com/ehuerta6/setup-smith) (formerly `ehuerta6/ai-setup`)  
+**Canonical repository:** [ehuerta6/setupsmith](https://github.com/ehuerta6/setupsmith) (formerly `ehuerta6/ai-setup`)<br>
 **Initial validation projects:** [CappyCode](https://github.com/ehuerta6/cappy-code) and [CappyHub](https://github.com/ehuerta6/cappy-hub)
 
 ## Problem
@@ -36,7 +36,7 @@ SetupSmith adds **guided adoption and deterministic lifecycle management** to th
 
 ## Concepts
 
-- **Source:** A configured Git repository with canonical reusable artifacts; initially `ehuerta6/setup-smith`.
+- **Source:** A configured Git repository with canonical reusable artifacts; initially `ehuerta6/setupsmith`.
 - **Artifact:** A uniquely identified catalog item (skill, agent, rule, or template). A skill includes its full directory and supporting files, not just `SKILL.md`.
 - **Project:** A Git working tree adopting an explicit subset of source artifacts.
 - **Installation:** One managed copy or supported link at an assistant-specific destination. One artifact may have multiple installations.
@@ -51,7 +51,7 @@ SetupSmith adds **guided adoption and deterministic lifecycle management** to th
 1. A user installs **only** `setup-ai` with a supported skills distribution mechanism and invokes `/setup-ai` in Codex or Claude Code. The initial setup must work without any other SetupSmith catalog skill or SetupSmith CLI already installed.
 2. The skill inspects existing project instructions (`AGENTS.md`, `CLAUDE.md` and related configuration), technology and repository metadata, relevant architecture/product docs, Git conventions, and the SetupSmith catalog. It reads selectively, not by indiscriminately loading the whole codebase.
 3. For an empty repository, it recommends only minimal immediately useful configuration. For an existing repository, it prioritizes understanding and preserving what is already there.
-4. The skill reuses `ai-config-builder` (bootstrap/adopt) and `project-audit` rather than duplicating those workflows: it **loads their canonical instructions as needed**, through the user's accessible source checkout or source retrieval, instead of assuming those skills were installed during bootstrap.
+4. The skill reuses `ai-config-builder` (bootstrap/adopt) and `audit-ai-config` rather than duplicating those workflows: it **loads their canonical instructions as needed**, through the user's accessible source checkout or source retrieval, instead of assuming those skills were installed during bootstrap.
 5. If the CLI is not available, initial read-only analysis and recommendations can still proceed. Before managed installation, the skill offers a verified CLI installation method and asks approval; it must not invent or silently execute an unverified installation command.
 6. If the canonical source cannot be reached and is not cached locally, it reports the missing information and cannot invent a complete or current recommendation set. It does not require changing the canonical catalog's directory structure or putting credentials in the project.
 
@@ -97,7 +97,7 @@ The manifest records the state actually achieved, not merely the requested plan.
 
 **FR-01 — Git source and discovery.** Configure one canonical Git source and its branch/ref (default to that repository's default branch); discover the current catalog without restructuring it. Discover skills from directories containing `SKILL.md`, and discover rules, agents, and templates from the corresponding source directories. Paths and file contents identify artifacts; `registry.yaml` supplies adoption/status metadata when present but is **not an exhaustive index** (it currently omits rules and templates). Report invalid/unsupported items individually, and capture immutable source revisions for comparisons. A compatible alternative source may provide explicit directory mappings.
 
-**FR-02 — Guided analysis.** `setup-ai` inspects only relevant project evidence; explains recommendations and loads the canonical `ai-config-builder` and `project-audit` procedures on demand without requiring them to be separately installed. Analysis must work before the CLI is installed, with an actionable error if the necessary catalog cannot be accessed.
+**FR-02 — Guided analysis.** `setup-ai` inspects only relevant project evidence; explains recommendations and loads the canonical `ai-config-builder` and `audit-ai-config` procedures on demand without requiring them to be separately installed. Analysis must work before the CLI is installed, with an actionable error if the necessary catalog cannot be accessed.
 
 **FR-03 — User choice.** Classify ADD/KEEP EXISTING/REPLACE/SKIP, distinguish reference-only recommendations from installable skills, and display catalog adoption status when available. Preserve project-specific behavior. User chooses exact installable artifacts and assistant targets.
 
@@ -121,7 +121,7 @@ The manifest records the state actually achieved, not merely the requested plan.
 
 ## Constraints and invariants
 
-- **Single repository:** Keep SetupSmith's source catalog and installer code in `ehuerta6/setup-smith`; preserve existing catalog entries and responsibilities.
+- **Single repository:** Keep SetupSmith's source catalog and installer code in `ehuerta6/setupsmith`; preserve existing catalog entries and responsibilities.
 - **Canonical precedence:** New explicit decisions and target-project sources outrank reusable defaults. One authoritative home per reusable behavior.
 - **Local-first and lightweight:** Use Git and local files/state, with no required cloud service or LLM for deterministic operations.
 - **Portability:** No absolute paths or credentials in committed manifests. Local cache may be machine-specific and uncommitted.
@@ -154,7 +154,7 @@ The manifest records the state actually achieved, not merely the requested plan.
 ## Implementation decisions and boundaries
 
 - `setup-ai` is a **skill**, not a new orchestration agent or an MCP server.
-- Reuse `ai-config-builder` and `project-audit`; do not duplicate their adoption/audit procedures in the skill.
+- Reuse `ai-config-builder` and `audit-ai-config`; do not duplicate their adoption/audit procedures in the skill.
 - The CLI owns deterministic file changes and manifest state, while the agent owns contextual analysis/recommendations.
 - The initial bootstrap should reuse an existing verified skill installer (e.g. Vercel Skills or an official client plugin) rather than requiring our own bootstrap executable. The bootstrap installation method must work with **only** `setup-ai` and must not depend on the SetupSmith CLI. Do not claim an example installation command works until `setup-ai` exists and is tested.
 - Evaluate `gh skill`, `npx skills`, and native client mechanisms for reusable internals/behaviors before implementing an installer. Third-party behavior may not satisfy our diff/approval guarantees; our manager remains responsible for them.

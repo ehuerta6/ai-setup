@@ -56,7 +56,7 @@ Do not create a new artifact when an existing one already owns the responsibilit
 
 Use when setting up a long-running workspace with multiple related chats. This is a Project Instruction task, not a request to copy a whole preset unchanged.
 
-1. Select the closest existing preset from `README.md` and `WORKFLOWS.md`; use `project-base` only when no specialized preset fits.
+1. Select the closest existing preset from `README.md` and `WORKFLOWS.md`; use `general-workspace` only when no specialized preset fits.
 2. Identify the project's purpose, scope, audience, and sources of truth from supplied files and explicit decisions. Record missing context rather than filling gaps.
 3. Separate durable workspace behavior from reference documents. Keep instructions focused on how chats should work; keep detailed facts, research, and evolving project material in referenced files.
 4. Preserve decisions and rationale in a durable project source so they carry across chats. Distinguish decisions from findings, hypotheses, and open questions.
@@ -113,7 +113,7 @@ Avoid:
 - implementation details that belong in project code;
 - copying documentation into prompts.
 
-Use `writing-for-agents` when useful.
+Use `write-agent-instructions` when useful.
 
 ## Adoption
 

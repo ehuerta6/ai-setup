@@ -2,7 +2,7 @@
 
 Stable Git and GitHub conventions.
 
-Use the `github-flow` skill for the procedural workflow.
+Use the `git-flow` skill to follow each repository’s configured Git and GitHub workflow. The name does not prescribe a traditional Git Flow branching model.
 
 Project-specific Git rules may override these defaults.
 

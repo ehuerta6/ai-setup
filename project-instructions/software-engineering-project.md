@@ -80,7 +80,7 @@ Examples:
 - debugging → `debug-with-evidence`
 - verification → `verify-change`
 - PR review → `review-pr`
-- multi-issue planning → `issue-flow`
+- multi-issue planning → `plan-issue-batches`
 - UI/UX → `impeccable`
 - Firebase → `firebase`
 

@@ -1,9 +1,9 @@
 ---
-name: project-audit
-description: Audit a project's AI configuration against current project needs and ai-setup to detect duplication, drift, stale instructions, and missing reusable configuration.
+name: audit-ai-config
+description: Audit a project's AI configuration against its current needs and the SetupSmith catalog to find duplication, drift, stale instructions, and missing reusable configuration.
 ---
 
-# Project audit
+# Audit AI configuration
 
 Audit an existing project's AI configuration.
 
@@ -15,8 +15,8 @@ Read:
 - current skills, agents, rules, and templates;
 - product and architecture sources;
 - Git workflow;
-- `ai-setup/README.md`;
-- `ai-setup/WORKFLOWS.md`.
+- `README.md`;
+- `WORKFLOWS.md`.
 
 ## Classify
 
@@ -25,7 +25,7 @@ For each relevant configuration item return:
 - KEEP — correct and project-specific;
 - UPDATE — still useful but stale or weaker;
 - REMOVE — unnecessary or duplicated;
-- MOVE — reusable behavior that belongs in ai-setup;
+- MOVE — reusable behavior that belongs in the SetupSmith catalog;
 - ADD — useful configuration currently missing.
 
 ## Check for

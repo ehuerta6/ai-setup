@@ -1,9 +1,9 @@
 ---
-name: issue-flow
+name: plan-issue-batches
 description: Plan open GitHub Issues into dependency-aware execution batches, generate prompts for selected batches, and update plans as repository state changes.
 ---
 
-# Issue flow
+# Plan issue batches
 
 Use this skill to plan implementation across existing GitHub Issues and prepare an execution prompt for a selected batch. It works across repositories and coding agents.
 
@@ -128,7 +128,7 @@ Do not rebuild an unaffected plan from scratch. Plans describe current evidence 
 
 - `to-issues` turns an approved spec into GitHub Issues; this skill plans implementation from existing issues.
 - `implement-issue` handles one issue; this skill coordinates dependencies across issues.
-- `batch-orchestrator` can execute an approved multi-issue plan; this skill plans and generates its prompt.
+- `issue-batch-orchestrator` can execute an approved multi-issue plan; this skill plans and generates its prompt.
 - `retro` evaluates completed work and records lessons when useful.
 
 This is an optional workflow, not a required pipeline. Skip any step that does not help the task.

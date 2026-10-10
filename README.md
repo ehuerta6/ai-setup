@@ -2,7 +2,7 @@
 
 A reusable catalog of skills, agents, rules, templates, and Project Instructions, with a planned guided setup and safe synchronization workflow for AI coding assistants.
 
-**Available now:** the configuration catalog and manual adoption workflows below. **In design, not yet implemented:** the `/setup-ai` onboarding skill and SetupSmith CLI for Analyze → Recommend → Install → Sync. See [the MVP specification](docs/SPEC.md).
+**Available now:** the configuration catalog and manual adoption workflows below. **In design, not yet implemented:** the `/setup-ai` onboarding skill and SetupSmith CLI for Analyze → Recommend → Install → Sync. See [the MVP specification](docs/setupsmith-mvp.md).
 
 Browse this README to find configuration. Use [WORKFLOWS.md](WORKFLOWS.md) to choose a process for a specific task.
 
@@ -30,7 +30,7 @@ Use the smallest artifact that fits the job:
 
 You do not need to adopt the whole catalog. In an existing repository, inspect its own instructions first, then copy only the relevant canonical files and keep product and architecture decisions in that repository. For example, a Firebase project might adopt `skills/firebase/SKILL.md` and `rules/security.md`, while leaving unrelated skills behind.
 
-The catalog also supports nontechnical work. Use [research-and-compare](skills/research-and-compare/SKILL.md) for a focused comparison, [learning-coach](project-instructions/learning-coach.md) for a multi-chat learning workspace, or [project-base](project-instructions/project-base.md) for personal planning that needs continuity across chats. Skills guide a task; Project Instructions hold durable workspace context. The project workspace, not this reusable catalog, should contain personal details and decisions.
+The catalog also supports nontechnical work. Use [research-and-compare](skills/research-and-compare/SKILL.md) for a focused comparison, [learning-coach](project-instructions/learning-coach.md) for a multi-chat learning workspace, or [general-workspace](project-instructions/general-workspace.md) when a workspace needs continuity across chats. Skills guide tasks; Project Instructions hold durable context. Keep personal details and decisions in the project workspace.
 
 # Skills
 
@@ -42,9 +42,9 @@ Path: `skills/ai-config-builder/SKILL.md`
 
 Design or evolve skills, agents, rules, templates, and Project Instructions without unnecessary duplication.
 
-### `project-audit`
+### `audit-ai-config`
 
-Path: `skills/project-audit/SKILL.md`
+Path: `skills/audit-ai-config/SKILL.md`
 
 Audit existing project AI configuration for drift, duplication, stale instructions, and missing reusable configuration.
 
@@ -114,21 +114,21 @@ Path: `skills/debug-with-evidence/SKILL.md`
 
 Debug using reproduction, evidence, explicit hypotheses, and focused tests instead of random edits.
 
-### `github-flow`
+### `git-flow`
 
-Path: `skills/github-flow/SKILL.md`
+Path: `skills/git-flow/SKILL.md`
 
 Execute the repository's Git and GitHub workflow for branches, commits, issues, PRs, and merging.
 
 Project-specific Git rules override its defaults.
 
-### `issue-flow`
+### `plan-issue-batches`
 
-Path: `skills/issue-flow/SKILL.md`
+Path: `skills/plan-issue-batches/SKILL.md`
 
 Plan existing GitHub Issues into dependency-aware batches, generate a prompt for a selected batch, and update the plan as repository state changes.
 
-Unlike `to-issues`, it does not create issues. Unlike the `batch-orchestrator` agent, it prepares the plan and prompt rather than executing the batch.
+Unlike `to-issues`, it does not create issues. Unlike the `issue-batch-orchestrator` agent, it prepares the plan and prompt rather than executing the batch.
 
 ## Stack-specific
 
@@ -154,9 +154,9 @@ Path: `skills/retro/SKILL.md`
 
 Evaluate completed AI-assisted work and identify improvements to skills, rules, tooling, or workflow.
 
-### `writing-for-agents`
+### `write-agent-instructions`
 
-Path: `skills/writing-for-agents/SKILL.md`
+Path: `skills/write-agent-instructions/SKILL.md`
 
 Write and maintain compact instructions intended for AI agents.
 
@@ -206,9 +206,9 @@ Independent reviewer for completed implementation work.
 
 Use before merge when a separate review perspective is useful.
 
-## `mentor`
+## `engineering-mentor`
 
-Path: `agents/mentor.md`
+Path: `agents/engineering-mentor.md`
 
 Explains engineering concepts and implementation decisions while helping with a task.
 
@@ -222,9 +222,9 @@ Review Supabase and PostgreSQL schema changes, migrations, RLS, authorization, a
 
 Only use for projects where Supabase or PostgreSQL database review is relevant.
 
-## `batch-orchestrator`
+## `issue-batch-orchestrator`
 
-Path: `agents/batch-orchestrator.md`
+Path: `agents/issue-batch-orchestrator.md`
 
 Execute an approved multi-issue execution plan.
 
@@ -348,9 +348,9 @@ Reusable presets for long-running ChatGPT Projects or other AI workspaces with m
 
 Project instructions define how an entire project behaves. Individual chats may have different purposes and should use only the relevant parts.
 
-## `resume-reviews`
+## `resume-workspace`
 
-Path: `project-instructions/resume-reviews.md`
+Path: `project-instructions/resume-workspace.md`
 
 For technical resume review, tailoring, Resume Bank usage, recruiter signal, and truthful positioning.
 
@@ -378,9 +378,9 @@ Path: `project-instructions/course-companion.md`
 
 For academic courses where syllabus, slides, assignments, and professor-provided material define the primary learning context.
 
-## `project-base`
+## `general-workspace`
 
-Path: `project-instructions/project-base.md`
+Path: `project-instructions/general-workspace.md`
 
 Universal starting point when no specialized Project Instruction preset fits.
 

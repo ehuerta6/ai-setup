@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lightweight consistency checks for the ai-setup catalog."""
+"""Lightweight consistency checks for the SetupSmith catalog."""
 
 from pathlib import Path
 import re
@@ -85,7 +85,7 @@ def main() -> int:
     # Catch common repository-relative references in catalog and instruction docs.
     docs = list(ROOT.glob("*.md")) + list(ROOT.glob("**/*.md"))
     docs = list(set(docs))
-    path_pattern = re.compile(r"(?<![\w./-])((?:skills|agents|rules|templates|project-instructions|scripts)/[\w./-]+\.(?:md|py))(?![\w.-])")
+    path_pattern = re.compile(r"(?<![\w./-])((?:skills|agents|rules|templates|project-instructions|scripts|docs)/[\w./-]+\.(?:md|py))(?![\w.-])")
     for doc in docs:
         text = doc.read_text(encoding="utf-8")
         for ref in path_pattern.findall(text):
