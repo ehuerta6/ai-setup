@@ -1025,6 +1025,8 @@ def remove_project(args: argparse.Namespace) -> int:
         if len(targets) != 1:
             raise CheckError(f"target is not uniquely owned by {artifact_id}: {relative_text}")
         target = targets[0]
+        if target["assistant"] not in {"codex", "claude-code"}:
+            raise CheckError(f"unsupported managed assistant target: {target['assistant']} at {relative_text}")
         relative = Path(*PurePosixPath(relative_text).parts)
         ensure_no_symlink_components(root, relative)
         destination = root / relative

@@ -908,6 +908,21 @@ class SkillCheckTests(unittest.TestCase):
         self.assertIn("unexpected or missing directories", errors)
         self.assertTrue(unexpected.is_dir())
 
+    def test_remove_refuses_legacy_managed_target_without_changes(self):
+        import shutil
+        legacy = self.project / ".codex/skills/guide"
+        legacy.parent.mkdir(parents=True)
+        shutil.move(self.project / ".agents/skills/guide", legacy)
+        manifest = json.loads(self.manifest_path.read_text())
+        manifest["artifacts"][0]["targets"][0] = {
+            "assistant": "codex-legacy", "path": ".codex/skills/guide", "state": "installed"}
+        self.manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        before = self.tree_snapshot()
+        code, _, errors = self.run_remove(["skills/guide=.codex/skills/guide"], preview=True)
+        self.assertEqual(code, 2)
+        self.assertIn("unsupported managed assistant target: codex-legacy", errors)
+        self.assertEqual(self.tree_snapshot(), before)
+
     def test_remove_adopted_custom_path_and_stale_or_symlinked_target_refusal(self):
         import shutil
         shutil.move(self.project / ".agents/skills/guide", self.project / ".agents/skills/local-guide")
