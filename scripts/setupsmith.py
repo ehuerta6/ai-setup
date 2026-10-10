@@ -3,6 +3,7 @@
 
 import argparse
 import copy
+import difflib
 import hashlib
 import json
 import os
@@ -19,6 +20,10 @@ class DiscoveryError(Exception):
 
 
 class InstallError(Exception):
+    pass
+
+
+class CheckError(Exception):
     pass
 
 
@@ -681,6 +686,399 @@ def render_preview(source: str, configured_ref: str, revision: str, plans: list[
     return "\n".join(lines)
 
 
+def load_check_manifest(path: Path) -> dict:
+    """Validate the read-only comparison contract, including later schema-1 baseline fields."""
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise CheckError(f"cannot read manifest {path}: {exc}") from exc
+    if not isinstance(value, dict) or value.get("schema_version") != 1 or not isinstance(value.get("artifacts"), list):
+        raise CheckError("unsupported or invalid .setupsmith/manifest.json")
+    seen_ids = set()
+    seen_paths = set()
+    for entry in value["artifacts"]:
+        if not isinstance(entry, dict) or not isinstance(entry.get("id"), str) or not re.fullmatch(
+                r"skills/[a-z0-9]+(?:-[a-z0-9]+)*", entry["id"]):
+            raise CheckError("manifest contains an invalid artifact identity")
+        if entry["id"] in seen_ids:
+            raise CheckError(f"manifest contains duplicate artifact identity: {entry['id']}")
+        seen_ids.add(entry["id"])
+        try:
+            source = entry.get("source")
+            if not isinstance(source, str) or Path(source).is_absolute() or not (
+                    re.match(r"^https?://", source) or re.match(r"^ssh://", source)
+                    or re.match(r"^git://", source)
+                    or re.fullmatch(r"[A-Za-z0-9_.-]+@[A-Za-z0-9.-]+:[A-Za-z0-9_./-]+(?:\.git)?", source)):
+                raise InstallError("source locator is missing")
+            portable_source_locator(source)
+        except InstallError as exc:
+            raise CheckError(f"manifest artifact {entry['id']} has an invalid source locator") from exc
+        baseline_state = entry.get("baseline_state", "verified")
+        if not isinstance(baseline_state, str) or baseline_state not in {"verified", "unknown"}:
+            raise CheckError(f"manifest artifact {entry['id']} has an invalid baseline state")
+        configured_ref = entry.get("configured_ref")
+        revision = entry.get("revision")
+        if baseline_state == "verified":
+            if not isinstance(configured_ref, str) or not configured_ref:
+                raise CheckError(f"verified artifact {entry['id']} has no configured source ref")
+            ref_components = configured_ref.split("/")
+            safe_branch_or_tag = (re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._/-]*", configured_ref)
+                                  and all(component and not component.startswith(".")
+                                          and not component.endswith((".", ".lock"))
+                                          and ".." not in component for component in ref_components))
+            if not (re.fullmatch(r"[0-9a-f]{40,64}", configured_ref) or safe_branch_or_tag):
+                raise CheckError(f"verified artifact {entry['id']} has an unsafe configured ref")
+            if not isinstance(revision, str) or not re.fullmatch(r"[0-9a-f]{40,64}", revision):
+                raise CheckError(f"verified artifact {entry['id']} has an invalid immutable revision")
+        else:
+            if revision is not None or (configured_ref is not None and
+                                         (not isinstance(configured_ref, str) or not configured_ref)):
+                raise CheckError(f"unknown-baseline artifact {entry['id']} contains verified provenance")
+        if not isinstance(entry.get("content_digest"), str) or not re.fullmatch(
+                r"[0-9a-f]{64}", entry["content_digest"]):
+            raise CheckError(f"manifest artifact {entry['id']} has an invalid content digest")
+        files = entry.get("files")
+        if not isinstance(files, dict) or not files:
+            raise CheckError(f"manifest artifact {entry['id']} has no recorded file identity")
+        for relative, digest in files.items():
+            if (not isinstance(relative, str) or not relative or not isinstance(digest, str)
+                    or not re.fullmatch(r"[0-9a-f]{64}", digest)):
+                raise CheckError(f"manifest artifact {entry['id']} contains an invalid file identity")
+            file_path = PurePosixPath(relative)
+            if (file_path.is_absolute() or file_path.as_posix() != relative or ".." in file_path.parts
+                    or "\\" in relative or any(ord(character) < 32 for character in relative)):
+                raise CheckError(f"manifest artifact {entry['id']} contains an unsafe file path")
+        targets = entry.get("targets")
+        if not isinstance(targets, list) or not targets:
+            raise CheckError(f"manifest artifact {entry['id']} has no managed targets")
+        artifact_name = entry["id"].split("/", 1)[1]
+        prefixes = {"codex": ".agents/skills", "claude-code": ".claude/skills",
+                    "codex-legacy": ".codex/skills", "legacy": ".ai/skills"}
+        for target in targets:
+            if not isinstance(target, dict) or not isinstance(target.get("assistant"), str) or not isinstance(
+                    target.get("path"), str) or target.get("state") != "installed":
+                raise CheckError(f"manifest artifact {entry['id']} contains an invalid target")
+            target_adoption = target.get("adoption", "installed")
+            if not isinstance(target_adoption, str) or target_adoption not in {"installed", "adopted"}:
+                raise CheckError(f"manifest artifact {entry['id']} contains an invalid target adoption state")
+            target_path = PurePosixPath(target["path"])
+            prefix = prefixes.get(target["assistant"])
+            basename = target_path.name
+            safe_basename = bool(re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", basename)) and not basename.endswith(".")
+            safe_layout = bool(prefix) and (
+                not target_path.is_absolute()
+                and target_path.as_posix() == target["path"]
+                and len(target_path.parts) == 3
+                and target_path.parts[:2] == tuple(prefix.split("/"))
+                and safe_basename
+            )
+            canonical_path = f"{prefix}/{artifact_name}" if prefix else None
+            if (not safe_layout
+                    or (target_adoption == "installed" and target["path"] != canonical_path)):
+                raise CheckError(f"manifest artifact {entry['id']} maps to a conflicting target path")
+            if target["path"] in seen_paths:
+                raise CheckError(f"manifest contains conflicting target ownership: {target['path']}")
+            seen_paths.add(target["path"])
+            if baseline_state == "unknown" and target_adoption != "adopted":
+                raise CheckError(f"unknown-baseline artifact {entry['id']} contains a non-adopted target")
+    return value
+
+
+def content_tree(directory: Path) -> tuple[str, dict[str, str], dict[str, bytes]]:
+    if directory.is_symlink() or not directory.is_dir():
+        raise InstallError(f"skill tree is missing or is not a safe directory: {directory.name}")
+    digest, hashes, files = tree_identity(directory)
+    contents = {path.relative_to(directory).as_posix(): path.read_bytes() for path in files}
+    return digest, hashes, contents
+
+
+def fetch_baseline_tree(repository: Path, revision: str, temporary: Path) -> Path:
+    """Materialize an immutable source revision in a disposable worktree."""
+    try:
+        git("-C", str(repository), "cat-file", "-e", f"{revision}^{{commit}}")
+    except DiscoveryError:
+        git("-C", str(repository), "fetch", "--quiet", "--no-tags", "origin", revision)
+    baseline = temporary / "baseline"
+    git("-C", str(repository), "worktree", "add", "--quiet", "--detach", str(baseline), revision)
+    resolved = git("-C", str(baseline), "rev-parse", "HEAD^{commit}")
+    if resolved != revision:
+        raise CheckError(f"source did not provide recorded revision {revision}")
+    return baseline
+
+
+def text_bytes(value: bytes) -> str | None:
+    try:
+        rendered = value.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+    if any(ord(character) < 32 and character not in "\n\r\t\f" for character in rendered):
+        return None
+    return rendered
+
+
+def tree_changes(before: dict[str, bytes], after: dict[str, bytes], left: str,
+                 right: str, *, include_text: bool) -> tuple[list[dict], list[str]]:
+    changes = []
+    patches = []
+    for relative in sorted(set(before) | set(after)):
+        old = before.get(relative)
+        new = after.get(relative)
+        if old == new:
+            continue
+        kind = "added" if old is None else "removed" if new is None else "modified"
+        changes.append({"path": relative, "change": kind,
+                        "before_sha256": hashlib.sha256(old).hexdigest() if old is not None else None,
+                        "after_sha256": hashlib.sha256(new).hexdigest() if new is not None else None})
+        if not include_text:
+            continue
+        old_text = text_bytes(old) if old is not None else ""
+        new_text = text_bytes(new) if new is not None else ""
+        if old_text is None or new_text is None:
+            patches.append(f"Binary resource {relative}: {kind}; "
+                           f"{left} sha256={hashlib.sha256(old).hexdigest() if old is not None else 'missing'}; "
+                           f"{right} sha256={hashlib.sha256(new).hexdigest() if new is not None else 'missing'}")
+            continue
+        lines = list(difflib.unified_diff(old_text.splitlines(keepends=True), new_text.splitlines(keepends=True),
+                                          fromfile=f"{left}/{relative}" if old is not None else "/dev/null",
+                                          tofile=f"{right}/{relative}" if new is not None else "/dev/null"))
+        patches.append("".join(lines).rstrip("\n") or f"{relative}: {kind}")
+    return changes, patches
+
+
+def check_project(args: argparse.Namespace, *, include_text: bool) -> int:
+    project_arg = Path(args.project).expanduser()
+    if not project_arg.is_dir():
+        raise CheckError(f"target project does not exist: {args.project}")
+    try:
+        root = Path(git("rev-parse", "--show-toplevel", cwd=project_arg)).resolve()
+    except DiscoveryError as exc:
+        raise CheckError("target must be inside a Git project") from exc
+    manifest_rel = Path(".setupsmith") / "manifest.json"
+    try:
+        ensure_no_symlink_components(root, manifest_rel)
+    except InstallError as exc:
+        raise CheckError(str(exc)) from exc
+    manifest_path = root / manifest_rel
+    if not manifest_path.exists():
+        print("No SetupSmith manifest; no managed skills to check.")
+        return 0
+    manifest = load_check_manifest(manifest_path)
+    requested = set(args.skill or [])
+    entries = manifest["artifacts"]
+    if requested:
+        normalized = {value if value.startswith("skills/") else f"skills/{value}" for value in requested}
+        entries = [entry for entry in entries if entry["id"] in normalized]
+        missing = normalized - {entry["id"] for entry in entries}
+        if missing:
+            raise CheckError("manifest has no selected artifact(s): " + ", ".join(sorted(missing)))
+
+    print("SetupSmith read-only " + ("diff" if include_text else "check"))
+    if not entries:
+        print("No managed skills recorded.")
+        return 0
+    with tempfile.TemporaryDirectory(prefix="setupsmith-check-") as temporary_name:
+        temporary = Path(temporary_name)
+        source_cache: dict[tuple[str, str | None], dict] = {}
+        baseline_cache: dict[tuple[str, str], Path | None] = {}
+        baseline_errors: dict[tuple[str, str], str] = {}
+        for entry_index, entry in enumerate(sorted(entries, key=lambda item: item["id"])):
+            artifact_id = entry["id"]
+            baseline_state = entry.get("baseline_state", "verified")
+            source = entry["source"]
+            configured_ref = entry.get("configured_ref")
+            source_key = (source, configured_ref)
+            if source_key not in source_cache:
+                context = {"repository": None, "revision": None, "error": None}
+                if not configured_ref:
+                    context["error"] = "configured ref was not recorded; no ref was selected"
+                else:
+                    repository = temporary / f"source-{entry_index}"
+                    try:
+                        resolved_ref, current_revision, _ = resolve_source(source, configured_ref, repository)
+                        context.update({"repository": repository, "revision": current_revision,
+                                        "configured_ref": resolved_ref})
+                    except (DiscoveryError, OSError) as exc:
+                        context["error"] = str(exc)
+                source_cache[source_key] = context
+            context = source_cache[source_key]
+            current_root = context["repository"]
+            upstream_revision = context["revision"]
+            upstream_skill = current_root / entry["id"] if current_root else None
+            upstream_digest = upstream_hashes = None
+            upstream_contents = None
+            upstream_error = context["error"]
+            upstream_removed = False
+            if current_root and upstream_skill:
+                if (not upstream_skill.exists() and not upstream_skill.is_symlink()) or (
+                        not upstream_skill.is_symlink() and
+                        (not upstream_skill.is_dir() or not (upstream_skill / "SKILL.md").is_file())):
+                    upstream_removed = True
+                else:
+                    try:
+                        metadata_errors = validate_skill_metadata(
+                            upstream_skill / "SKILL.md", entry["id"].split("/", 1)[1])
+                        if metadata_errors:
+                            upstream_error = "current upstream skill metadata is invalid: " + "; ".join(metadata_errors)
+                        else:
+                            upstream_digest, upstream_hashes, upstream_contents = content_tree(upstream_skill)
+                    except (InstallError, OSError) as exc:
+                        upstream_error = f"unsafe or unreadable current upstream skill: {exc}"
+
+            baseline_contents = None
+            baseline_error = None
+            baseline_revision = entry.get("revision")
+            if baseline_state == "verified":
+                baseline_key = (source, baseline_revision)
+                if baseline_key not in baseline_cache:
+                    repository = current_root
+                    if repository is None:
+                        baseline_cache[baseline_key] = None
+                        baseline_errors[baseline_key] = "current source ref is unavailable; no cached source is available"
+                    else:
+                        try:
+                            baseline_root = fetch_baseline_tree(repository, baseline_revision,
+                                                                temporary / f"baseline-{entry_index}")
+                            baseline_cache[baseline_key] = baseline_root
+                        except (DiscoveryError, CheckError, OSError) as exc:
+                            baseline_cache[baseline_key] = None
+                            baseline_errors[baseline_key] = f"cannot retrieve recorded revision {baseline_revision}: {exc}"
+                baseline_root = baseline_cache[baseline_key]
+                if baseline_root:
+                    try:
+                        baseline_dir = baseline_root / entry["id"]
+                        baseline_digest, baseline_hashes, baseline_contents = content_tree(baseline_dir)
+                        if baseline_digest != entry["content_digest"] or baseline_hashes != entry["files"]:
+                            raise CheckError(f"recorded baseline identity does not match immutable revision for {artifact_id}")
+                    except (InstallError, OSError) as exc:
+                        raise CheckError(f"cannot verify recorded baseline for {artifact_id}: {exc}") from exc
+                else:
+                    baseline_error = baseline_errors[baseline_key]
+
+            item = {"id": artifact_id, "source": source, "configured_ref": configured_ref,
+                    "installed_revision": baseline_revision, "baseline_state": baseline_state,
+                    "source_freshness": "fresh" if context["repository"] else "unavailable",
+                    "upstream_revision": upstream_revision, "upstream_removed": upstream_removed,
+                    "upstream_error": upstream_error, "baseline_error": baseline_error,
+                    "upstream_changes": [], "targets": []}
+            if baseline_state == "verified" and baseline_contents is not None and upstream_contents is not None:
+                item["upstream_changes"], item["upstream_patches"] = tree_changes(
+                    baseline_contents, upstream_contents,
+                    f"Baseline {baseline_revision}", f"Upstream {upstream_revision}", include_text=include_text)
+            elif baseline_state == "verified" and baseline_contents is not None and upstream_removed:
+                item["upstream_changes"], item["upstream_patches"] = tree_changes(
+                    baseline_contents, {}, f"Baseline {baseline_revision}", "Upstream removed", include_text=include_text)
+            for target in sorted(entry["targets"], key=lambda value: (value["assistant"], value["path"])):
+                statuses = []
+                assistant = target["assistant"]
+                if assistant not in {"codex", "claude-code"}:
+                    statuses.append("UNSUPPORTED_TARGET")
+                if baseline_state == "unknown":
+                    statuses.append("UNKNOWN_BASELINE")
+                if upstream_error:
+                    statuses.append("SOURCE_UNAVAILABLE")
+                if upstream_removed:
+                    statuses.append("UPSTREAM_REMOVED")
+                if assistant not in {"codex", "claude-code", "codex-legacy", "legacy"}:
+                    item["targets"].append({"assistant": assistant, "path": target["path"],
+                                             "statuses": statuses, "local_changes": [],
+                                             "local_error": None, "local_patches": []})
+                    continue
+                target_path = PurePosixPath(target["path"])
+                try:
+                    ensure_no_symlink_components(root, Path(*target_path.parts))
+                    local_dir = root / Path(*target_path.parts)
+                    if not local_dir.exists() and not local_dir.is_symlink():
+                        statuses.append("MISSING_INSTALLATION")
+                        local_hashes = local_contents = None
+                    elif local_dir.is_symlink() or not local_dir.is_dir():
+                        statuses.append("DESTINATION_CONFLICT")
+                        local_hashes = local_contents = None
+                    elif not (local_dir / "SKILL.md").is_file():
+                        statuses.append("DESTINATION_CONFLICT")
+                        local_hashes = local_contents = None
+                    else:
+                        _, local_hashes, local_contents = content_tree(local_dir)
+                except (InstallError, OSError) as exc:
+                    statuses.append("DESTINATION_CONFLICT")
+                    local_hashes = local_contents = None
+                    local_error = str(exc)
+                else:
+                    local_error = None
+
+                expected_hashes = entry["files"]
+                local_changes = []
+                local_patches = []
+                if local_hashes is not None:
+                    for relative in sorted(set(expected_hashes) | set(local_hashes)):
+                        before = expected_hashes.get(relative)
+                        after = local_hashes.get(relative)
+                        if before != after:
+                            local_changes.append({"path": relative, "before_sha256": before,
+                                                  "after_sha256": after,
+                                                  "change": "added" if before is None else
+                                                  "removed" if after is None else "modified"})
+                    if local_changes:
+                        statuses.append("LOCAL_DIVERGENCE")
+                    if include_text and baseline_state == "verified" and baseline_contents is not None:
+                        _, local_patches = tree_changes(baseline_contents, local_contents,
+                                                       f"Baseline {baseline_revision}",
+                                                       f"Local {target['path']}", include_text=True)
+                if baseline_state == "verified" and baseline_error and "SOURCE_UNAVAILABLE" not in statuses:
+                    statuses.append("SOURCE_UNAVAILABLE")
+                if (baseline_state == "verified" and baseline_contents is not None
+                        and upstream_hashes is not None and upstream_hashes != entry["files"]):
+                    statuses.append("UPSTREAM_UPDATE")
+                if (baseline_state == "verified" and baseline_contents is not None
+                        and local_hashes == entry["files"] and upstream_hashes == entry["files"]
+                        and assistant in {"codex", "claude-code"}):
+                    statuses.append("CURRENT")
+                if not statuses:
+                    statuses.append("CURRENT")
+                target_report = {"assistant": assistant, "path": target["path"],
+                                 "statuses": statuses, "local_changes": local_changes,
+                                 "local_error": local_error,
+                                 "local_patches": local_patches if include_text else []}
+                item["targets"].append(target_report)
+            if not include_text:
+                item.pop("upstream_patches", None)
+            print(f"\n{artifact_id}")
+            print(f"  source: {source}")
+            print(f"  configured ref: {configured_ref or 'unavailable (not recorded)'}")
+            print(f"  recorded baseline: {baseline_revision or 'unknown'} ({baseline_state})")
+            print(f"  current upstream: {upstream_revision or 'unavailable'} "
+                  f"({'fresh' if upstream_revision else 'SOURCE_UNAVAILABLE'})")
+            if upstream_error:
+                print(f"  source note: {upstream_error}; no cached source was used")
+            if baseline_error:
+                print(f"  baseline note: {baseline_error}")
+            if item["upstream_changes"]:
+                for change in item["upstream_changes"]:
+                    print(f"  upstream {change['change']}: {change['path']} "
+                          f"({change['before_sha256'] or 'missing'} → {change['after_sha256'] or 'missing'})")
+            elif baseline_state == "verified" and upstream_contents is not None:
+                print("  baseline to upstream: unchanged")
+            for target_report in item["targets"]:
+                print(f"  {target_report['assistant']}: {', '.join(target_report['statuses'])}")
+                print(f"    path: {target_report['path']}")
+                if target_report["local_error"]:
+                    print(f"    destination note: {target_report['local_error']}")
+                for change in target_report["local_changes"]:
+                    print(f"    local {change['change']}: {change['path']} "
+                          f"({change['before_sha256'] or 'missing'} → {change['after_sha256'] or 'missing'})")
+            if include_text:
+                if baseline_state == "unknown":
+                    print("  text diff unavailable: the adopted baseline stores observed hashes only; "
+                          "no historical canonical revision is claimed")
+                for patch_text in item.get("upstream_patches", []):
+                    print(f"\nBaseline {baseline_revision} → Upstream {upstream_revision}")
+                    print("\n" + patch_text)
+                for target_report in item["targets"]:
+                    for patch_text in target_report["local_patches"]:
+                        print(f"\nBaseline {baseline_revision} → Local {target_report['path']}")
+                        print("\n" + patch_text)
+    return 0
+
+
 def install(args: argparse.Namespace) -> int:
     if len(set(args.assistant)) != len(args.assistant):
         raise InstallError("assistant targets must be selected only once")
@@ -876,7 +1274,7 @@ def install(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Discover, install, and adopt SetupSmith catalog skills")
+    parser = argparse.ArgumentParser(description="Discover, install, adopt, check, and diff SetupSmith skills")
     sub = parser.add_subparsers(dest="command", required=True)
     command = sub.add_parser("discover", help="discover catalog artifacts from a Git source")
     command.add_argument("--source", required=True, help="Git repository locator")
@@ -896,13 +1294,21 @@ def main(argv: list[str] | None = None) -> int:
     adopt_command.add_argument("--map", dest="mapping", action="append", default=[], metavar="PATH=skills/ID",
                                help="explicitly map an existing relative directory to a canonical skill identity")
     adopt_command.add_argument("--preview-only", action="store_true", help="show the plan without prompting or writing")
+    for name, help_text in (("check", "compare managed skills with their recorded baseline and configured upstream"),
+                            ("diff", "show read-only text and binary diffs for managed skills")):
+        check_command = sub.add_parser(name, help=help_text)
+        check_command.add_argument("--project", required=True, help="existing target Git project")
+        check_command.add_argument("--skill", action="append", help="limit output to a skill name or skills/<name>")
     args = parser.parse_args(argv)
     try:
-        validate_source_argument(args.source)
+        if args.command in {"discover", "install"}:
+            validate_source_argument(args.source)
         if args.command == "install":
             return install(args)
         if args.command == "adopt":
             return adopt(args)
+        if args.command in {"check", "diff"}:
+            return check_project(args, include_text=args.command == "diff")
         with tempfile.TemporaryDirectory(prefix="setupsmith-discovery-") as temporary:
             root = Path(temporary) / "source"
             configured, revision, default = resolve_source(args.source, args.ref, root)
@@ -910,6 +1316,9 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(report, indent=2))
             return 0 if report["complete"] else 2
     except InstallError as exc:
+        print(f"setupsmith: {exc}", file=sys.stderr)
+        return 2
+    except CheckError as exc:
         print(f"setupsmith: {exc}", file=sys.stderr)
         return 2
     except (DiscoveryError, OSError, UnicodeError) as exc:
