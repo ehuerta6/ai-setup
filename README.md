@@ -336,6 +336,20 @@ Path: `templates/BATCH.md`
 
 Persist an issue orchestration graph, execution waves, gates, and orchestrator prompt.
 
+## `AGENT_TASK`
+
+Path: `templates/AGENT_TASK.md`
+
+Shape a task for delegated work that may need tools, repository access, changes, or verification. Use it when the agent needs a defined outcome, scope, evidence, or delivery report.
+
+## `CHAT_TASK`
+
+Path: `templates/CHAT_TASK.md`
+
+Shape a conversational request for research, writing, analysis, or similar work. Tools may still be used when useful.
+
+Use neither when a direct request is already clear and needs no reusable structure. Keep only sections that affect the task; remove unused optional sections rather than filling them with guesses. In every project, follow its instructions and sources of truth over reusable prompts.
+
 ## `DECISION`
 
 Path: `templates/DECISION.md`
