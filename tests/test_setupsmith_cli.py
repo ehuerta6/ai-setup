@@ -833,6 +833,223 @@ class SkillCheckTests(unittest.TestCase):
             code = SETUPSMITH.main(args)
         return code, output.getvalue(), errors.getvalue()
 
+    def run_remove(self, targets, *, preview=False, response="REMOVE", tty=True):
+        output, errors = io.StringIO(), io.StringIO()
+        args = ["remove", "--project", str(self.project)]
+        for target in targets:
+            args.extend(["--target", target])
+        if preview:
+            args.append("--preview-only")
+        with patch("builtins.input", return_value=response), \
+                patch.object(sys, "stdin", type("TTY", (io.StringIO,), {"isatty": lambda self: tty})("")), \
+                redirect_stdout(output), redirect_stderr(errors):
+            code = SETUPSMITH.main(args)
+        return code, output.getvalue(), errors.getvalue()
+
+    def test_remove_one_target_keeps_sibling_and_manifest_entry(self):
+        code, output, errors = self.run_remove(["skills/guide=.agents/skills/guide"])
+        self.assertEqual(code, 0, errors)
+        self.assertIn("destinations remaining: .claude/skills/guide", output)
+        self.assertFalse((self.project / ".agents/skills/guide").exists())
+        self.assertTrue((self.project / ".claude/skills/guide/SKILL.md").is_file())
+        entry = json.loads(self.manifest_path.read_text())["artifacts"][0]
+        self.assertEqual(entry["targets"], [{"assistant": "claude-code", "path": ".claude/skills/guide", "state": "installed"}])
+
+    def test_remove_final_target_preserves_unrelated_manifest_entry(self):
+        manifest = json.loads(self.manifest_path.read_text())
+        other = dict(manifest["artifacts"][0], id="skills/other", targets=[
+            {"assistant": "codex", "path": ".agents/skills/other", "state": "installed"}])
+        manifest["artifacts"].append(other)
+        self.manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        code, _, errors = self.run_remove(["skills/guide=.agents/skills/guide", "skills/guide=.claude/skills/guide"])
+        self.assertEqual(code, 0, errors)
+        self.assertFalse((self.project / ".agents/skills/guide").exists())
+        self.assertFalse((self.project / ".claude/skills/guide").exists())
+        remaining = json.loads(self.manifest_path.read_text())["artifacts"]
+        self.assertEqual([entry["id"] for entry in remaining], ["skills/other"])
+
+    def test_remove_preview_decline_and_noninteractive_refuse_without_writes(self):
+        before = self.tree_snapshot()
+        code, output, errors = self.run_remove(["skills/guide=.agents/skills/guide"], preview=True)
+        self.assertEqual(code, 0, errors)
+        self.assertIn("Proposed manifest:", output)
+        self.assertIn("files/directories proposed for removal", output)
+        self.assertEqual(self.tree_snapshot(), before)
+        code, output, errors = self.run_remove(["skills/guide=.agents/skills/guide"], response="no")
+        self.assertEqual(code, 0, errors)
+        self.assertIn("Declined", output)
+        self.assertEqual(self.tree_snapshot(), before)
+        code, _, errors = self.run_remove(["skills/guide=.agents/skills/guide"], tty=False)
+        self.assertEqual(code, 2)
+        self.assertIn("requires interactive terminal approval", errors)
+        self.assertEqual(self.tree_snapshot(), before)
+
+    def test_remove_refuses_local_modification_unknown_identity_mismatch_and_unmanaged_target(self):
+        skill_file = self.project / ".agents/skills/guide/SKILL.md"
+        skill_file.write_text(skill_file.read_text() + "local\n", encoding="utf-8")
+        code, _, errors = self.run_remove(["skills/guide=.agents/skills/guide"], preview=True)
+        self.assertEqual(code, 2)
+        self.assertIn("locally changed or unexpected content", errors)
+        skill_file.write_text(skill_file.read_text().replace("local\n", ""), encoding="utf-8")
+        code, _, errors = self.run_remove(["skills/guide=.agents/skills/not-guide"], preview=True)
+        self.assertEqual(code, 2)
+        self.assertIn("not uniquely owned", errors)
+        self.write_manifest(baseline_state="unknown", revision=None)
+        code, output, errors = self.run_remove(["skills/guide=.agents/skills/guide"], preview=True)
+        self.assertEqual(code, 0, errors)
+        self.assertIn("canonical history unverified", output)
+        self.assertTrue((self.project / ".agents/skills/guide/SKILL.md").is_file())
+
+    def test_remove_refuses_unrecorded_empty_directory(self):
+        unexpected = self.project / ".agents/skills/guide/user-notes/empty"
+        unexpected.mkdir(parents=True)
+        code, _, errors = self.run_remove(["skills/guide=.agents/skills/guide"], preview=True)
+        self.assertEqual(code, 2)
+        self.assertIn("unexpected or missing directories", errors)
+        self.assertTrue(unexpected.is_dir())
+
+    def test_remove_refuses_legacy_managed_target_without_changes(self):
+        import shutil
+        legacy = self.project / ".codex/skills/guide"
+        legacy.parent.mkdir(parents=True)
+        shutil.move(self.project / ".agents/skills/guide", legacy)
+        manifest = json.loads(self.manifest_path.read_text())
+        manifest["artifacts"][0]["targets"][0] = {
+            "assistant": "codex-legacy", "path": ".codex/skills/guide", "state": "installed"}
+        self.manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        before = self.tree_snapshot()
+        code, _, errors = self.run_remove(["skills/guide=.codex/skills/guide"], preview=True)
+        self.assertEqual(code, 2)
+        self.assertIn("unsupported managed assistant target: codex-legacy", errors)
+        self.assertEqual(self.tree_snapshot(), before)
+
+    def test_remove_adopted_custom_path_and_stale_or_symlinked_target_refusal(self):
+        import shutil
+        shutil.move(self.project / ".agents/skills/guide", self.project / ".agents/skills/local-guide")
+        manifest = json.loads(self.manifest_path.read_text())
+        manifest["artifacts"][0]["targets"][0]["path"] = ".agents/skills/local-guide"
+        manifest["artifacts"][0]["targets"][0]["adoption"] = "adopted"
+        self.manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        code, output, errors = self.run_remove(["skills/guide=.agents/skills/local-guide"], preview=True)
+        self.assertEqual(code, 0, errors)
+        self.assertIn(".agents/skills/local-guide/", output)
+        self.assertNotIn(".agents/skills/guide/", output)
+        before = self.tree_snapshot()
+        code, _, errors = self.run_remove(["skills/guide=.agents/skills/local-guide"], tty=False)
+        self.assertEqual(code, 2)
+        self.assertEqual(self.tree_snapshot(), before)
+        shutil.rmtree(self.project / ".agents/skills/local-guide")
+        (self.project / ".agents/skills/local-guide").symlink_to(self.base / "outside")
+        code, _, errors = self.run_remove(["skills/guide=.agents/skills/local-guide"], preview=True)
+        self.assertEqual(code, 2)
+        self.assertIn("symlink", errors)
+
+    def test_remove_stale_content_after_confirmation_is_refused(self):
+        target_file = self.project / ".agents/skills/guide/SKILL.md"
+        def edit_then_confirm(prompt):
+            target_file.write_text(target_file.read_text() + "concurrent\n", encoding="utf-8")
+            return "REMOVE"
+        before_manifest = self.manifest_path.read_bytes()
+        output, errors = io.StringIO(), io.StringIO()
+        with patch("builtins.input", side_effect=edit_then_confirm), \
+                patch.object(sys, "stdin", type("TTY", (io.StringIO,), {"isatty": lambda self: True})("")), \
+                redirect_stdout(output), redirect_stderr(errors):
+            code = SETUPSMITH.main(["remove", "--project", str(self.project), "--target",
+                                    "skills/guide=.agents/skills/guide"])
+        self.assertEqual(code, 2)
+        self.assertIn("stale preview or changed content", errors.getvalue())
+        self.assertTrue(target_file.is_file())
+        self.assertIn("concurrent", target_file.read_text())
+        self.assertEqual(self.manifest_path.read_bytes(), before_manifest)
+
+    def test_remove_detects_edit_in_check_to_rename_window_and_restores_it(self):
+        original_replace = os.replace
+        target_file = self.project / ".agents/skills/guide/SKILL.md"
+        def edit_before_rename(source, destination):
+            if str(destination).endswith("target-0"):
+                target_file.write_text(target_file.read_text() + "concurrent\n", encoding="utf-8")
+            return original_replace(source, destination)
+        before_manifest = self.manifest_path.read_bytes()
+        output, errors = io.StringIO(), io.StringIO()
+        with patch.object(os, "replace", side_effect=edit_before_rename), \
+                patch("builtins.input", return_value="REMOVE"), \
+                patch.object(sys, "stdin", type("TTY", (io.StringIO,), {"isatty": lambda self: True})("")), \
+                redirect_stdout(output), redirect_stderr(errors):
+            code = SETUPSMITH.main(["remove", "--project", str(self.project), "--target",
+                                    "skills/guide=.agents/skills/guide"])
+        self.assertEqual(code, 2)
+        self.assertIn("staged destination changed during removal", errors.getvalue())
+        self.assertTrue(target_file.is_file())
+        self.assertIn("concurrent", target_file.read_text())
+        self.assertEqual(self.manifest_path.read_bytes(), before_manifest)
+
+    def test_remove_filesystem_failure_restores_staged_target_and_manifest(self):
+        original_replace = os.replace
+        calls = 0
+        def fail_target_stage(source, destination):
+            nonlocal calls
+            if str(destination).endswith("target-0"):
+                calls += 1
+                raise OSError("injected staging failure")
+            return original_replace(source, destination)
+        before_manifest = self.manifest_path.read_bytes()
+        before_tree = SETUPSMITH.tree_identity(self.project / ".agents/skills/guide")[0]
+        output, errors = io.StringIO(), io.StringIO()
+        with patch.object(os, "replace", side_effect=fail_target_stage), \
+                patch("builtins.input", return_value="REMOVE"), \
+                patch.object(sys, "stdin", type("TTY", (io.StringIO,), {"isatty": lambda self: True})("")), \
+                redirect_stdout(output), redirect_stderr(errors):
+            code = SETUPSMITH.main(["remove", "--project", str(self.project), "--target",
+                                    "skills/guide=.agents/skills/guide"])
+        self.assertEqual(code, 2)
+        self.assertIn("original destinations restored", errors.getvalue())
+        self.assertEqual(calls, 1)
+        self.assertEqual(SETUPSMITH.tree_identity(self.project / ".agents/skills/guide")[0], before_tree)
+        self.assertEqual(self.manifest_path.read_bytes(), before_manifest)
+
+    def test_remove_manifest_failure_restores_destinations_and_manifest(self):
+        original_replace = os.replace
+        def fail_manifest(source, destination):
+            if str(destination).endswith("/.setupsmith/manifest.json"):
+                raise OSError("injected manifest replacement failure")
+            return original_replace(source, destination)
+        before_manifest = self.manifest_path.read_bytes()
+        before_tree = SETUPSMITH.tree_identity(self.project / ".agents/skills/guide")[0]
+        output, errors = io.StringIO(), io.StringIO()
+        with patch.object(os, "replace", side_effect=fail_manifest), \
+                patch("builtins.input", return_value="REMOVE"), \
+                patch.object(sys, "stdin", type("TTY", (io.StringIO,), {"isatty": lambda self: True})("")), \
+                redirect_stdout(output), redirect_stderr(errors):
+            code = SETUPSMITH.main(["remove", "--project", str(self.project), "--target",
+                                    "skills/guide=.agents/skills/guide"])
+        self.assertEqual(code, 2)
+        self.assertIn("original destinations restored", errors.getvalue())
+        self.assertEqual(SETUPSMITH.tree_identity(self.project / ".agents/skills/guide")[0], before_tree)
+        self.assertEqual(self.manifest_path.read_bytes(), before_manifest)
+
+    def test_remove_batch_failure_restores_previously_staged_target(self):
+        original_replace = os.replace
+        def fail_second_stage(source, destination):
+            if str(destination).endswith("target-1"):
+                raise OSError("injected second target failure")
+            return original_replace(source, destination)
+        before_manifest = self.manifest_path.read_bytes()
+        before_trees = {path: SETUPSMITH.tree_identity(self.project / path)[0] for path in
+                        (".agents/skills/guide", ".claude/skills/guide")}
+        output, errors = io.StringIO(), io.StringIO()
+        with patch.object(os, "replace", side_effect=fail_second_stage), \
+                patch("builtins.input", return_value="REMOVE"), \
+                patch.object(sys, "stdin", type("TTY", (io.StringIO,), {"isatty": lambda self: True})("")), \
+                redirect_stdout(output), redirect_stderr(errors):
+            code = SETUPSMITH.main(["remove", "--project", str(self.project), "--target",
+                                    "skills/guide=.agents/skills/guide", "--target",
+                                    "skills/guide=.claude/skills/guide"])
+        self.assertEqual(code, 2)
+        self.assertIn("original destinations restored", errors.getvalue())
+        for path, digest in before_trees.items():
+            self.assertEqual(SETUPSMITH.tree_identity(self.project / path)[0], digest)
+        self.assertEqual(self.manifest_path.read_bytes(), before_manifest)
+
     def run_install(self, response="INSTALL\n"):
         output, errors = io.StringIO(), io.StringIO()
         args = ["install", "--source", "https://example.invalid/catalog.git",

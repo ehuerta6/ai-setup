@@ -1,6 +1,6 @@
 # Managed skill installation
 
-SetupSmith's standalone CLI supports deterministic, project-local installation of selected skills, explicit adoption of existing skills, read-only checks and diffs, explicitly approved safe updates, and manifest-based restoration of verified skills. These commands do not require an LLM or the `setup-ai` skill. Managed removal is not implemented.
+SetupSmith's standalone CLI supports deterministic, project-local installation of selected skills, explicit adoption of existing skills, read-only checks and diffs, explicitly approved safe updates, manifest-based restoration of verified skills, and explicit managed-target removal. These commands do not require an LLM or the `setup-ai` skill. Automatic synchronization is not implemented.
 
 ## Commands
 
@@ -156,6 +156,22 @@ The preview names each artifact, pinned revision, digest, assistant destination,
 
 Only recorded Codex (`.agents/skills/<name>/`) and Claude Code (`.claude/skills/<name>/`) destinations are reconstructed. Adopted targets keep their recorded safe local path. Existing destinations that match the verified baseline are no-ops; occupied destinations with different content and unsafe paths or symlinks block restoration. Unknown-baseline customizations cannot be reconstructed from canonical history; present files are preserved, and missing custom content must be supplied separately. Legacy and other unsupported targets are reported without being described as restored. Repeating a successful restore does not rewrite files or the manifest.
 
+## Explicit managed removal
+
+Select each exact target independently. The canonical artifact ID identifies the manifest entry; the path is the actual recorded destination, including a custom adopted basename:
+
+```sh
+python3 scripts/setupsmith.py remove --project /path/to/project \
+  --target skills/research-and-compare=.agents/skills/research-and-compare \
+  --preview-only
+python3 scripts/setupsmith.py remove --project /path/to/project \
+  --target skills/research-and-compare=.agents/skills/research-and-compare
+```
+
+Repeat `--target` to select a batch or select another assistant's installation. The preview names the canonical artifact, assistant, exact path, baseline status, current content identity, files/directories, remaining destinations, and complete proposed manifest. `--preview-only` does not write. An applying invocation requires typing `REMOVE` once for the complete batch; declining or running without a terminal changes nothing.
+
+Removal proceeds only when the manifest uniquely owns the exact destination and all recorded file hashes and tree identity still match. Unknown-baseline adopted content can be removed when it still matches its observed adoption identity; the preview explicitly says canonical history is unverified. Locally changed, missing, symlinked, unsafe, unsupported, or unmanaged destinations are refused. A stale manifest or changed destination after approval is refused. Destinations are staged for recovery while the manifest is updated; if staging or manifest replacement fails, SetupSmith restores the original destinations or reports the preserved recovery path. Removing one target leaves the artifact and its metadata when other targets remain. The final target removes only that artifact entry.
+
 ### Schema-1 adoption fields
 
 The checker accepts the shared schema-1 contract for explicit adoption. Existing Issue #11 entries without `baseline_state` and target `adoption` fields remain verified installations. Adopted targets carry `adoption: "adopted"`; their target path may have a safe local basename that differs from the canonical artifact ID while remaining in the recorded assistant-specific layout. Installed targets retain the canonical basename. Verified entries identify the canonical commit and full-tree hashes. Unknown-baseline entries have `baseline_state: "unknown"`, `revision: null`, and observed file hashes. A configured ref may be null if it was not known. Observed hashes help detect changes after adoption but do not establish canonical history. This additive contract does not reinterpret older manifests.
@@ -169,4 +185,4 @@ The checker accepts the shared schema-1 contract for explicit adoption. Existing
 - Repeating an unchanged installation is a no-op, including no manifest rewrite.
 - Installation refuses a managed skill whose files have changed; `check` reports `LOCAL_DIVERGENCE` and `diff` shows the changes without repairing them.
 - Local source paths are accepted only when their Git repository has a credential-free portable `origin` URL; that URL is what the manifest records.
-- Global installation, background synchronization, managed removal, and advanced multi-target update recovery are out of scope.
+- Global installation and background synchronization are out of scope.
