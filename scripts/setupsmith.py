@@ -640,6 +640,8 @@ def file_hashes_on_disk(directory: Path) -> dict[str, str]:
             raise InstallError(f"installed destination contains symlink: {relative.as_posix()}")
         if path.is_file():
             result[relative.as_posix()] = hashlib.sha256(path.read_bytes()).hexdigest()
+        elif not path.is_dir():
+            raise InstallError(f"installed destination contains unsupported filesystem entry: {relative.as_posix()}")
     return result
 
 
@@ -851,7 +853,7 @@ def tree_changes(before: dict[str, bytes], after: dict[str, bytes], left: str,
     return changes, patches
 
 
-def check_project(args: argparse.Namespace, *, include_text: bool) -> int:
+def check_project(args: argparse.Namespace, *, include_text: bool, collect: bool = False) -> int | list[dict]:
     project_arg = Path(args.project).expanduser()
     if not project_arg.is_dir():
         raise CheckError(f"target project does not exist: {args.project}")
@@ -867,7 +869,7 @@ def check_project(args: argparse.Namespace, *, include_text: bool) -> int:
     manifest_path = root / manifest_rel
     if not manifest_path.exists():
         print("No SetupSmith manifest; no managed skills to check.")
-        return 0
+        return [] if collect else 0
     manifest = load_check_manifest(manifest_path)
     requested = set(args.skill or [])
     entries = manifest["artifacts"]
@@ -881,7 +883,8 @@ def check_project(args: argparse.Namespace, *, include_text: bool) -> int:
     print("SetupSmith read-only " + ("diff" if include_text else "check"))
     if not entries:
         print("No managed skills recorded.")
-        return 0
+        return [] if collect else 0
+    reports = []
     with tempfile.TemporaryDirectory(prefix="setupsmith-check-") as temporary_name:
         temporary = Path(temporary_name)
         source_cache: dict[tuple[str, str | None], dict] = {}
@@ -966,6 +969,11 @@ def check_project(args: argparse.Namespace, *, include_text: bool) -> int:
                     "upstream_revision": upstream_revision, "upstream_removed": upstream_removed,
                     "upstream_error": upstream_error, "baseline_error": baseline_error,
                     "upstream_changes": [], "targets": []}
+            item["_entry"] = entry
+            item["_upstream_root"] = upstream_skill
+            item["_upstream_hashes"] = upstream_hashes
+            item["_upstream_contents"] = upstream_contents
+            item["_upstream_digest"] = upstream_digest
             if baseline_state == "verified" and baseline_contents is not None and upstream_contents is not None:
                 item["upstream_changes"], item["upstream_patches"] = tree_changes(
                     baseline_contents, upstream_contents,
@@ -1043,8 +1051,11 @@ def check_project(args: argparse.Namespace, *, include_text: bool) -> int:
                 target_report = {"assistant": assistant, "path": target["path"],
                                  "statuses": statuses, "local_changes": local_changes,
                                  "local_error": local_error,
-                                 "local_patches": local_patches if include_text else []}
+                                 "local_patches": local_patches if include_text else [],
+                                 "_local_hashes": local_hashes,
+                                 "_local_contents": local_contents if local_hashes is not None else None}
                 item["targets"].append(target_report)
+            reports.append(item)
             if not include_text:
                 item.pop("upstream_patches", None)
             print(f"\n{artifact_id}")
@@ -1082,6 +1093,236 @@ def check_project(args: argparse.Namespace, *, include_text: bool) -> int:
                     for patch_text in target_report["local_patches"]:
                         print(f"\nBaseline {baseline_revision} → Local {target_report['path']}")
                         print("\n" + patch_text)
+    return reports if collect else 0
+
+
+def update_project(args: argparse.Namespace) -> int:
+    """Preview and apply explicitly selected, clean managed skill updates."""
+    inspection_args = copy.copy(args)
+    inspection_args.skill = None
+    reports = check_project(inspection_args, include_text=True, collect=True)
+    safe: dict[str, dict] = {}
+    exclusions: dict[str, str] = {}
+    for item in reports:
+        entry = item["_entry"]
+        reason = None
+        if entry.get("baseline_state", "verified") != "verified":
+            reason = "unknown baseline"
+        elif item["source_freshness"] != "fresh" or item["upstream_error"] or item["baseline_error"]:
+            reason = "source or recorded baseline unavailable/unverified"
+        elif item["upstream_removed"]:
+            reason = "upstream skill removed; deletion is prohibited"
+        elif not item["upstream_revision"] or item["_upstream_hashes"] is None:
+            reason = "upstream content unavailable or invalid"
+        elif item["_upstream_hashes"] == entry["files"]:
+            reason = "no update available"
+        else:
+            for target in item["targets"]:
+                if target["assistant"] not in {"codex", "claude-code"}:
+                    reason = f"unsupported destination {target['path']}"
+                    break
+                if target["_local_hashes"] != entry["files"]:
+                    reason = f"target {target['path']} is missing, unsafe, or differs from baseline"
+                    break
+        if reason:
+            exclusions[item["id"]] = reason
+        else:
+            safe[item["id"]] = item
+
+    requested = {value if value.startswith("skills/") else f"skills/{value}" for value in args.skill or []}
+    if args.all_safe:
+        selected = set(safe)
+    elif args.none:
+        selected = set()
+    else:
+        selected = requested
+    unknown = selected - set(safe)
+    if unknown:
+        details = [f"{name}: {exclusions.get(name, 'not managed')}" for name in sorted(unknown)]
+        raise CheckError("selected update is unsafe: " + "; ".join(details))
+
+    print("\nSetupSmith update selection")
+    print("Safe updates: " + (", ".join(sorted(safe)) or "none"))
+    for artifact, reason in sorted(exclusions.items()):
+        print(f"Excluded {artifact}: {reason}")
+    if args.all_safe:
+        print("Selection: Select All Safe")
+    elif args.none:
+        print("Selection: Select None")
+    elif requested:
+        print("Selection: " + ", ".join(sorted(selected)))
+    else:
+        print("Selection: Select None (use --skill, --all-safe, or --none to choose)")
+    if not selected:
+        print("No artifacts selected; no project files changed.")
+        return 0
+
+    root = Path(git("rev-parse", "--show-toplevel", cwd=Path(args.project).expanduser())).resolve()
+    manifest_rel = Path(".setupsmith/manifest.json")
+    manifest_path = root / manifest_rel
+    manifest = load_check_manifest(manifest_path)
+    proposed_manifest = copy.deepcopy(manifest)
+    proposed_entries = {}
+    changes: dict[str, dict] = {}
+    for artifact in sorted(selected):
+        item = safe[artifact]
+        entry = item["_entry"]
+        print(f"\nSelected {artifact}")
+        print(f"  source: {entry['source']}\n  configured ref: {entry['configured_ref']}")
+        print(f"  recorded revision: {entry['revision']}\n  target revision: {item['upstream_revision']}")
+        for target in item["targets"]:
+            print(f"  destination: {target['path']}")
+        for change in item["upstream_changes"]:
+            print(f"  {change['change']}: {change['path']} ({change['before_sha256'] or 'missing'} -> {change['after_sha256'] or 'missing'})")
+        for patch_text in item.get("upstream_patches", []):
+            print("\n" + patch_text)
+        changes[artifact] = item
+        proposed = next(entry for entry in proposed_manifest["artifacts"] if entry["id"] == artifact)
+        proposed_entries[artifact] = {
+            "revision": {"from": proposed["revision"], "to": item["upstream_revision"]},
+            "content_digest": {"from": proposed["content_digest"], "to": item["_upstream_digest"]},
+            "files": {"from": proposed["files"], "to": item["_upstream_hashes"]},
+            "targets": proposed["targets"],
+        }
+        proposed.update({"revision": item["upstream_revision"],
+                         "content_digest": item["_upstream_digest"],
+                         "files": item["_upstream_hashes"]})
+    print("\nManifest changes:")
+    print(json.dumps(proposed_entries, indent=2, sort_keys=True))
+    if args.preview_only:
+        print("Preview only; no project files changed.")
+        return 0
+    if not sys.stdin.isatty():
+        raise CheckError("update requires interactive terminal approval; preview the plan and rerun interactively")
+    answer = input("Type UPDATE to approve this complete selected batch: ")
+    if answer != "UPDATE":
+        print("Declined; no project files changed.")
+        return 0
+
+    with tempfile.TemporaryDirectory(prefix=".setupsmith-update-", dir=root) as temporary_name:
+        temporary = Path(temporary_name)
+        resolved: dict[tuple[str, str], tuple[str, Path]] = {}
+        for item in changes.values():
+            key = (item["source"], item["configured_ref"])
+            if key not in resolved:
+                checkout = temporary / f"recheck-{len(resolved)}"
+                try:
+                    ref, revision, _ = resolve_source(key[0], key[1], checkout)
+                except (DiscoveryError, OSError) as exc:
+                    raise CheckError(f"stale preview: configured source became unavailable for {item['id']}: {exc}") from exc
+                resolved[key] = (revision if ref == key[1] else "", checkout)
+            if resolved[key][0] != item["upstream_revision"]:
+                raise CheckError(f"stale preview: configured source changed for {item['id']}; preview again")
+        ensure_no_symlink_components(root, manifest_rel)
+        if load_check_manifest(manifest_path) != manifest:
+            raise CheckError("stale preview: manifest changed; preview again")
+        for artifact, item in changes.items():
+            for target in item["targets"]:
+                relative = Path(*PurePosixPath(target["path"]).parts)
+                ensure_no_symlink_components(root, relative)
+                if file_hashes_on_disk(root / relative) != item["_entry"]["files"]:
+                    raise CheckError(f"stale preview: destination changed: {target['path']}")
+
+        staged: dict[tuple[str, str], Path] = {}
+        stage_index = 0
+        for artifact, item in changes.items():
+            source_tree = resolved[(item["source"], item["configured_ref"])][1] / artifact
+            if not source_tree.is_dir() or content_tree(source_tree)[0] != item["_upstream_digest"]:
+                raise CheckError(f"stale preview: source bytes changed for {artifact}")
+            for target in item["targets"]:
+                stage = temporary / f"staged-{stage_index}"
+                stage_index += 1
+                shutil.copytree(source_tree, stage, symlinks=False)
+                if tree_identity(stage)[0] != item["_upstream_digest"]:
+                    raise CheckError(f"staged content verification failed for {artifact}")
+                staged[(artifact, target["path"])] = stage
+
+        ensure_no_symlink_components(root, manifest_rel)
+        if load_check_manifest(manifest_path) != manifest:
+            raise CheckError("stale preview: manifest changed during staging; preview again")
+        for item in changes.values():
+            for target in item["targets"]:
+                relative = Path(*PurePosixPath(target["path"]).parts)
+                ensure_no_symlink_components(root, relative)
+                if file_hashes_on_disk(root / relative) != item["_entry"]["files"]:
+                    raise CheckError(f"stale preview: destination changed during staging: {target['path']}")
+
+        backups: list[tuple[Path, Path]] = []
+        installed: list[tuple[Path, str]] = []
+        old_manifest = manifest_path.read_bytes()
+        new_manifest_bytes = None
+        backup_root = Path(tempfile.mkdtemp(prefix=".setupsmith-recovery-", dir=root))
+        try:
+            for artifact, item in changes.items():
+                for target in item["targets"]:
+                    relative = Path(*PurePosixPath(target["path"]).parts)
+                    destination = root / relative
+                    ensure_no_symlink_components(root, relative)
+                    if file_hashes_on_disk(destination) != item["_entry"]["files"]:
+                        raise CheckError(f"stale preview: destination changed before replacement: {target['path']}")
+                    backup = backup_root / f"backup-{len(backups)}"
+                    os.replace(destination, backup)
+                    backups.append((destination, backup))
+                    os.replace(staged[(artifact, target["path"])], destination)
+                    installed.append((destination, item["_upstream_digest"]))
+                    if tree_identity(destination)[0] != item["_upstream_digest"]:
+                        raise InstallError(f"installed content verification failed: {target['path']}")
+            data = (json.dumps(proposed_manifest, indent=2, sort_keys=True) + "\n").encode("utf-8")
+            if manifest_path.read_bytes() != old_manifest:
+                raise CheckError("stale preview: manifest changed before update completion")
+            new_manifest_bytes = data
+            fd, temp_file = tempfile.mkstemp(prefix=".manifest-", suffix=".tmp", dir=manifest_path.parent)
+            with os.fdopen(fd, "wb") as output:
+                output.write(data)
+                output.flush()
+                os.fsync(output.fileno())
+            os.replace(temp_file, manifest_path)
+        except Exception as exc:
+            errors = []
+            for path, expected_digest in reversed(installed):
+                try:
+                    if not path.is_dir() or tree_identity(path)[0] != expected_digest:
+                        errors.append(f"did not remove concurrent changes at {path.relative_to(root)}")
+                    else:
+                        shutil.rmtree(path)
+                except OSError as rollback:
+                    errors.append(f"could not remove {path.relative_to(root)}: {rollback}")
+            for destination, backup in reversed(backups):
+                try:
+                    if destination.exists() or destination.is_symlink():
+                        errors.append(f"did not overwrite concurrent destination {destination.relative_to(root)}")
+                    else:
+                        os.replace(backup, destination)
+                except OSError as rollback:
+                    errors.append(f"could not restore {destination.relative_to(root)}: {rollback}")
+            unrestored = [(destination, backup) for destination, backup in backups if backup.exists()]
+            recovery_dir = backup_root if unrestored else None
+            if unrestored:
+                paths = ", ".join(str(destination.relative_to(root)) for destination, _ in unrestored)
+                errors.append(f"original backups preserved for {paths}")
+            else:
+                try:
+                    backup_root.rmdir()
+                except OSError as rollback:
+                    errors.append(f"could not remove empty recovery directory {backup_root.relative_to(root)}: {rollback}")
+            try:
+                current_manifest = manifest_path.read_bytes() if manifest_path.exists() else None
+                if current_manifest == old_manifest:
+                    pass
+                elif new_manifest_bytes is not None and current_manifest == new_manifest_bytes:
+                    manifest_path.write_bytes(old_manifest)
+                else:
+                    errors.append("did not overwrite concurrent manifest changes")
+            except OSError as rollback:
+                errors.append(f"could not verify or restore manifest: {rollback}")
+            recovery_note = f"; original skill backup preserved at {recovery_dir.relative_to(root)}" if recovery_dir else ""
+            raise InstallError(f"update failed: {exc}; " + ("; ".join(errors) if errors else "prior files restored")
+                               + recovery_note) from exc
+        try:
+            shutil.rmtree(backup_root)
+        except OSError as cleanup:
+            print(f"Update succeeded; temporary backup cleanup failed at {backup_root.relative_to(root)}: {cleanup}")
+    print("Updated successfully: " + ", ".join(sorted(selected)))
     return 0
 
 
@@ -1280,7 +1521,7 @@ def install(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Discover, install, adopt, check, and diff SetupSmith skills")
+    parser = argparse.ArgumentParser(description="Discover, install, adopt, check, diff, and update SetupSmith skills")
     sub = parser.add_subparsers(dest="command", required=True)
     command = sub.add_parser("discover", help="discover catalog artifacts from a Git source")
     command.add_argument("--source", required=True, help="Git repository locator")
@@ -1305,6 +1546,13 @@ def main(argv: list[str] | None = None) -> int:
         check_command = sub.add_parser(name, help=help_text)
         check_command.add_argument("--project", required=True, help="existing target Git project")
         check_command.add_argument("--skill", action="append", help="limit output to a skill name or skills/<name>")
+    update_command = sub.add_parser("update", help="preview and explicitly approve safe managed skill updates")
+    update_command.add_argument("--project", required=True, help="existing target Git project")
+    selection = update_command.add_mutually_exclusive_group()
+    selection.add_argument("--skill", action="append", help="select one safe skill; repeat for a batch")
+    selection.add_argument("--all-safe", action="store_true", help="select all eligible updates")
+    selection.add_argument("--none", action="store_true", help="select no updates")
+    update_command.add_argument("--preview-only", action="store_true", help="show selection and preview without approval or writes")
     args = parser.parse_args(argv)
     try:
         if args.command in {"discover", "install"}:
@@ -1313,6 +1561,8 @@ def main(argv: list[str] | None = None) -> int:
             return install(args)
         if args.command == "adopt":
             return adopt(args)
+        if args.command == "update":
+            return update_project(args)
         if args.command in {"check", "diff"}:
             return check_project(args, include_text=args.command == "diff")
         with tempfile.TemporaryDirectory(prefix="setupsmith-discovery-") as temporary:
@@ -1328,7 +1578,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"setupsmith: {exc}", file=sys.stderr)
         return 2
     except (DiscoveryError, OSError, UnicodeError) as exc:
-        print(json.dumps({"source": args.source, "configured_ref": args.ref or "DEFAULT",
+        print(json.dumps({"source": getattr(args, "source", None),
+                          "configured_ref": getattr(args, "ref", None) or "DEFAULT",
                           "complete": False, "artifacts": [], "errors": [str(exc)], "warnings": []}, indent=2))
         return 2
 
