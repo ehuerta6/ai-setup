@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import tempfile
 import unittest
@@ -76,6 +77,19 @@ class CatalogDiscoveryTests(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertFalse(report["complete"])
         self.assertTrue(any("registry.yaml is missing" in warning for warning in report["warnings"]))
+
+    def test_symlinked_resources_are_reported_without_following_them(self):
+        outside = Path(self.temporary.name) / "outside-secret.md"
+        outside.write_text("do not inspect", encoding="utf-8")
+        resource = self.root / "skills" / "guide" / "references" / "outside.md"
+        os.symlink(outside, resource)
+        self.git("add", ".")
+        self.git("commit", "-qm", "symlink resource")
+        code, report = self.run_discovery()
+        self.assertEqual(code, 2)
+        self.assertFalse(report["complete"])
+        self.assertTrue(any("is a symbolic link" in error for error in report["errors"]))
+        self.assertNotIn("do not inspect", json.dumps(report))
 
     def test_invalid_entry_and_registry_status_make_partial_discovery(self):
         (self.root / "skills" / "broken").mkdir()

@@ -107,11 +107,17 @@ def discover(root: Path, source: str, configured_ref: str, commit: str, default_
     dirs = {"skills": "skills", "agents": "agents", "rules": "rules", "templates": "templates"}
     for kind, dirname in dirs.items():
         base = root / dirname
+        if base.is_symlink():
+            errors.append(f"invalid catalog directory: {dirname}/ is a symbolic link")
+            continue
         if not base.is_dir():
             errors.append(f"missing catalog directory: {dirname}/")
             continue
         if kind == "skills":
             for child in sorted(base.iterdir()):
+                if child.is_symlink():
+                    errors.append(f"invalid skill entry: {child.relative_to(root).as_posix()} is a symbolic link")
+                    continue
                 if not child.is_dir():
                     errors.append(f"unsupported skills entry: {child.relative_to(root).as_posix()} (expected directory)")
                     continue
@@ -119,14 +125,20 @@ def discover(root: Path, source: str, configured_ref: str, commit: str, default_
                 if not skill_file.is_file():
                     errors.append(f"invalid skill {child.name}: missing SKILL.md")
                     continue
-                resources = [p for p in child.rglob("*") if p.is_file()]
+                resources = []
+                for path in child.rglob("*"):
+                    if path.is_symlink():
+                        errors.append(f"unsupported skill resource: {path.relative_to(root).as_posix()} is a symbolic link")
+                    elif path.is_file():
+                        resources.append(path)
                 add(kind, child.name, resources)
         else:
-            found = sorted(p for p in base.iterdir() if p.is_file() and p.suffix.lower() == ".md")
-            for path in found:
-                add(kind, path.stem, [path])
             for path in base.iterdir():
-                if not path.is_file() or path.suffix.lower() != ".md":
+                if path.is_symlink():
+                    errors.append(f"unsupported {kind} entry: {path.relative_to(root).as_posix()} is a symbolic link")
+                elif path.is_file() and path.suffix.lower() == ".md":
+                    add(kind, path.stem, [path])
+                else:
                     errors.append(f"unsupported {kind} entry: {path.relative_to(root).as_posix()}")
     for (kind, identity), status in statuses.items():
         if kind in dirs and not any(a["id"] == f"{kind}/{identity}" for a in artifacts):
