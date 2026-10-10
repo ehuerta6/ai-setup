@@ -95,7 +95,7 @@ Use when a project already has AI configuration and it may have drifted.
 
 Flow:
 
-project-audit
+audit-ai-config
 
 Audit for:
 
@@ -112,7 +112,7 @@ Use a specialized Project Instruction preset when one clearly fits.
 
 Available presets include:
 
-- resume-reviews;
+- resume-workspace;
 - learning-coach;
 - interview-prep;
 - software-engineering-project;
@@ -120,11 +120,11 @@ Available presets include:
 
 If no specialized preset fits, start from:
 
-project-base
+general-workspace
 
 Then:
 
-preset or project-base
+preset or general-workspace
 → tune using current sources, context, and handoff when available
 → remove irrelevant generic behavior
 → produce final Project Instructions
@@ -171,12 +171,12 @@ implement-issue
 
 ## Several related issues
 
-Use `issue-flow` when GitHub Issues already exist and need dependency-aware sequencing.
+Use `plan-issue-batches` when GitHub Issues already exist and need dependency-aware sequencing.
 
-- `issue-flow plan` or “Arma un flow” reviews relevant open issues and proposes execution batches.
-- `issue-flow orchestrate Batch 2` generates a current, copy-paste-ready prompt for a selected batch.
+- `plan-issue-batches plan` or “Arma un flow” reviews relevant open issues and proposes execution batches.
+- `plan-issue-batches orchestrate Batch 2` generates a current, copy-paste-ready prompt for a selected batch.
 - Use `to-issues` first when an approved spec still needs to be split into issues.
-- Give the generated prompt to a coding agent, or use `batch-orchestrator` when coordinated execution is useful and supported.
+- Give the generated prompt to a coding agent, or use `issue-batch-orchestrator` when coordinated execution is useful and supported.
 
 Planning and prompt generation do not change issue state or start implementation. This workflow is optional; skip steps that do not add value.
 
@@ -225,7 +225,7 @@ Use when the main task is branch, commit, PR, or merge workflow.
 
 Flow:
 
-github-flow
+git-flow
 
 Project-specific Git rules override reusable defaults.
 

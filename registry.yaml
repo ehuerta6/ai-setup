@@ -25,7 +25,7 @@ skills:
   debug-with-evidence:
     status: testing
 
-  github-flow:
+  git-flow:
     status: testing
 
   handoff:
@@ -34,7 +34,7 @@ skills:
   retro:
     status: testing
 
-  writing-for-agents:
+  write-agent-instructions:
     status: testing
 
   humanizer:
@@ -52,13 +52,13 @@ skills:
   resume-review:
     status: testing
 
-  issue-flow:
+  plan-issue-batches:
     status: testing
 
   ai-config-builder:
     status: testing
 
-  project-audit:
+  audit-ai-config:
     status: testing
 
   research-and-compare:
@@ -68,13 +68,13 @@ agents:
   pr-reviewer:
     status: testing
 
-  mentor:
+  engineering-mentor:
     status: testing
 
   supabase-database-reviewer:
     status: testing
 
-  batch-orchestrator:
+  issue-batch-orchestrator:
     status: testing
 
   spec-reviewer:
@@ -84,10 +84,10 @@ agents:
     status: testing
 
 project_instructions:
-  project-base:
+  general-workspace:
     status: testing
 
-  resume-reviews:
+  resume-workspace:
     status: testing
 
   learning-coach:
