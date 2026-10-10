@@ -969,6 +969,202 @@ def _restore_project(args: argparse.Namespace, source_temporary: Path) -> int:
     return 0
 
 
+def remove_project(args: argparse.Namespace) -> int:
+    """Remove explicitly selected, unchanged managed destinations."""
+    project_arg = Path(args.project).expanduser()
+    if not project_arg.is_dir():
+        raise CheckError(f"target project does not exist: {args.project}")
+    try:
+        root = Path(git("rev-parse", "--show-toplevel", cwd=project_arg)).resolve()
+    except DiscoveryError as exc:
+        raise CheckError("target must be inside a Git project") from exc
+    manifest_rel = Path(".setupsmith/manifest.json")
+    ensure_no_symlink_components(root, manifest_rel)
+    manifest_path = root / manifest_rel
+    if not manifest_path.is_file():
+        raise CheckError("no SetupSmith manifest; no managed installations to remove")
+    try:
+        manifest_bytes = manifest_path.read_bytes()
+    except OSError as exc:
+        raise CheckError(f"cannot read manifest: {exc}") from exc
+    manifest = load_check_manifest(manifest_path)
+    requested = []
+    for value in args.target:
+        if "=" not in value:
+            raise CheckError("each --target must be skills/ID=EXACT_MANAGED_RELATIVE_PATH")
+        artifact_id, relative_text = value.split("=", 1)
+        relative = PurePosixPath(relative_text)
+        if (not re.fullmatch(r"skills/[a-z0-9]+(?:-[a-z0-9]+)*", artifact_id)
+                or relative.is_absolute() or relative.as_posix() != relative_text
+                or ".." in relative.parts or "\\" in relative_text):
+            raise CheckError(f"unsafe or invalid removal target: {value}")
+        requested.append((artifact_id, relative_text))
+    if len(set(requested)) != len(requested):
+        raise CheckError("duplicate removal target selection")
+
+    plans = []
+
+    def directory_paths(destination: Path) -> set[str]:
+        return {path.relative_to(destination).as_posix() for path in destination.rglob("*") if path.is_dir()}
+
+    def expected_directory_paths(files: dict[str, str]) -> set[str]:
+        result = set()
+        for relative in files:
+            parent = PurePosixPath(relative).parent
+            while parent != PurePosixPath("."):
+                result.add(parent.as_posix())
+                parent = parent.parent
+        return result
+
+    for artifact_id, relative_text in requested:
+        entries = [entry for entry in manifest["artifacts"] if entry["id"] == artifact_id]
+        if len(entries) != 1:
+            raise CheckError(f"not managed by SetupSmith: {artifact_id} ({relative_text})")
+        entry = entries[0]
+        targets = [target for target in entry["targets"] if target["path"] == relative_text]
+        if len(targets) != 1:
+            raise CheckError(f"target is not uniquely owned by {artifact_id}: {relative_text}")
+        target = targets[0]
+        relative = Path(*PurePosixPath(relative_text).parts)
+        ensure_no_symlink_components(root, relative)
+        destination = root / relative
+        if not destination.is_dir() or destination.is_symlink():
+            raise CheckError(f"managed destination is missing or unsafe: {relative_text}")
+        try:
+            current_hashes = file_hashes_on_disk(destination)
+            current_digest, _, _ = tree_identity(destination)
+        except (InstallError, OSError) as exc:
+            raise CheckError(f"cannot verify managed destination {relative_text}: {exc}") from exc
+        if current_hashes != entry["files"] or current_digest != entry["content_digest"]:
+            raise CheckError(f"refusing to remove locally changed or unexpected content: {relative_text}")
+        current_directories = directory_paths(destination)
+        expected_directories = expected_directory_paths(entry["files"])
+        if current_directories != expected_directories:
+            unexpected = sorted(current_directories - expected_directories)
+            missing = sorted(expected_directories - current_directories)
+            raise CheckError(f"refusing to remove unexpected or missing directories at {relative_text}: "
+                             f"unexpected={unexpected}, missing={missing}")
+        if entry.get("baseline_state", "verified") == "unknown":
+            baseline_note = "unknown baseline; observed adoption identity matches (canonical history unverified)"
+        else:
+            baseline_note = f"verified baseline {entry['revision']}"
+        plans.append({"artifact_id": artifact_id, "entry": entry, "target": target,
+                      "relative": relative, "destination": destination,
+                      "hashes": current_hashes, "digest": current_digest,
+                      "baseline_note": baseline_note})
+
+    print("SetupSmith managed removal preview")
+    proposed = copy.deepcopy(manifest)
+    proposed_by_id = {entry["id"]: entry for entry in proposed["artifacts"]}
+    for plan in plans:
+        entry = proposed_by_id[plan["artifact_id"]]
+        print(f"\nArtifact: {plan['artifact_id']}\n  assistant: {plan['target']['assistant']}"
+              f"\n  destination: {plan['relative'].as_posix()}/"
+              f"\n  recorded baseline: {plan['baseline_note']}"
+              f"\n  current content sha256: {plan['digest']}")
+        print("  files/directories proposed for removal:")
+        for path in sorted(plan["destination"].rglob("*")):
+            rel = path.relative_to(root).as_posix()
+            print(f"    {'directory' if path.is_dir() else 'file'} {rel}")
+        remaining = [target for target in entry["targets"] if target["path"] != plan["relative"].as_posix()]
+        print("  destinations remaining: " + (", ".join(t["path"] for t in remaining) or "none"))
+        entry["targets"] = remaining
+        if not remaining:
+            proposed["artifacts"].remove(entry)
+    print("\nProposed manifest:")
+    print(json.dumps(proposed, indent=2, sort_keys=True))
+    if args.preview_only:
+        print("Preview only; no project files changed.")
+        return 0
+    if not sys.stdin.isatty():
+        raise CheckError("remove requires interactive terminal approval; preview the plan and rerun interactively")
+    if input("Type REMOVE to approve this complete selected batch: ") != "REMOVE":
+        print("Declined; no project files changed.")
+        return 0
+
+    # Recheck the complete ownership record and each byte identity immediately before staging.
+    ensure_no_symlink_components(root, manifest_rel)
+    try:
+        if manifest_path.read_bytes() != manifest_bytes:
+            raise CheckError("stale preview: manifest changed; preview again")
+    except OSError as exc:
+        raise CheckError(f"stale preview: cannot reread manifest: {exc}") from exc
+    for plan in plans:
+        ensure_no_symlink_components(root, plan["relative"])
+        try:
+            if (not plan["destination"].is_dir()
+                    or file_hashes_on_disk(plan["destination"]) != plan["hashes"]
+                    or tree_identity(plan["destination"])[0] != plan["digest"]
+                    or directory_paths(plan["destination"]) != expected_directory_paths(plan["hashes"])):
+                raise CheckError(f"stale preview or changed content: {plan['relative'].as_posix()}")
+        except (InstallError, OSError) as exc:
+            raise CheckError(f"stale preview or unsafe destination {plan['relative']}: {exc}") from exc
+
+    recovery_root = Path(tempfile.mkdtemp(prefix=".setupsmith-removal-", dir=root))
+    moved = []
+    manifest_written = False
+    temporary_manifest = None
+    try:
+        for index, plan in enumerate(plans):
+            ensure_no_symlink_components(root, plan["relative"])
+            if (not plan["destination"].is_dir()
+                    or file_hashes_on_disk(plan["destination"]) != plan["hashes"]
+                    or tree_identity(plan["destination"])[0] != plan["digest"]
+                    or directory_paths(plan["destination"]) != expected_directory_paths(plan["hashes"])):
+                raise CheckError(f"stale preview or changed content before removal: {plan['relative'].as_posix()}")
+            backup = recovery_root / f"target-{index}"
+            os.replace(plan["destination"], backup)
+            moved.append((plan, backup))
+            if (file_hashes_on_disk(backup) != plan["hashes"]
+                    or tree_identity(backup)[0] != plan["digest"]
+                    or directory_paths(backup) != expected_directory_paths(plan["hashes"])):
+                raise CheckError(f"stale preview: staged destination changed during removal: "
+                                 f"{plan['relative'].as_posix()}")
+        data = (json.dumps(proposed, indent=2, sort_keys=True) + "\n").encode("utf-8")
+        descriptor, temporary_name = tempfile.mkstemp(prefix=".manifest-", suffix=".tmp", dir=manifest_path.parent)
+        temporary_manifest = Path(temporary_name)
+        with os.fdopen(descriptor, "wb") as output:
+            output.write(data)
+            output.flush()
+            os.fsync(output.fileno())
+        ensure_no_symlink_components(root, manifest_rel)
+        if manifest_path.read_bytes() != manifest_bytes:
+            raise CheckError("stale preview: manifest changed before replacement")
+        os.replace(temporary_manifest, manifest_path)
+        manifest_written = True
+    except (OSError, InstallError, CheckError) as exc:
+        recovery_errors = []
+        if not manifest_written:
+            for plan, backup in reversed(moved):
+                try:
+                    ensure_no_symlink_components(root, plan["relative"])
+                    if plan["destination"].exists():
+                        raise OSError("destination was recreated; backup preserved")
+                    os.replace(backup, plan["destination"])
+                except (OSError, InstallError) as recovery_error:
+                    recovery_errors.append(f"{plan['relative']}: {recovery_error} (backup: {backup})")
+        if recovery_errors:
+            raise CheckError(f"removal failed: {exc}; recovery required: " + "; ".join(recovery_errors)) from exc
+        if temporary_manifest is not None:
+            try:
+                temporary_manifest.unlink(missing_ok=True)
+            except OSError:
+                pass
+        try:
+            recovery_root.rmdir()
+        except OSError:
+            pass
+        raise CheckError(f"removal failed; original destinations restored: {exc}") from exc
+    try:
+        shutil.rmtree(recovery_root)
+    except OSError as exc:
+        print(f"Removal is incomplete: managed destinations are absent, but staged files may remain at "
+              f"{recovery_root}; inspect or remove that recovery directory manually: {exc}", file=sys.stderr)
+        return 2
+    print("Removed selected managed destinations.")
+    return 0
+
+
 def hashes_for_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
@@ -1680,7 +1876,7 @@ def install(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Discover, install, adopt, check, diff, update, and restore SetupSmith skills")
+    parser = argparse.ArgumentParser(description="Discover, install, adopt, check, diff, update, restore, and remove SetupSmith skills")
     sub = parser.add_subparsers(dest="command", required=True)
     command = sub.add_parser("discover", help="discover catalog artifacts from a Git source")
     command.add_argument("--source", required=True, help="Git repository locator")
@@ -1715,6 +1911,11 @@ def main(argv: list[str] | None = None) -> int:
     restore_command = sub.add_parser("restore", help="reconstruct verified managed skills from pinned manifest revisions")
     restore_command.add_argument("--project", required=True, help="existing target Git project")
     restore_command.add_argument("--preview-only", action="store_true", help="show missing destinations without prompting or writing")
+    remove_command = sub.add_parser("remove", help="preview and explicitly approve removal of managed skill targets")
+    remove_command.add_argument("--project", required=True, help="existing target Git project")
+    remove_command.add_argument("--target", action="append", required=True, metavar="SKILLS/ID=PATH",
+                                 help="exact managed target; repeat to select a batch")
+    remove_command.add_argument("--preview-only", action="store_true", help="show the plan without prompting or writing")
     args = parser.parse_args(argv)
     try:
         if args.command in {"discover", "install"}:
@@ -1727,6 +1928,8 @@ def main(argv: list[str] | None = None) -> int:
             return update_project(args)
         if args.command == "restore":
             return restore_project(args)
+        if args.command == "remove":
+            return remove_project(args)
         if args.command in {"check", "diff"}:
             return check_project(args, include_text=args.command == "diff")
         with tempfile.TemporaryDirectory(prefix="setupsmith-discovery-") as temporary:
