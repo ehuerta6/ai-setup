@@ -93,6 +93,8 @@ Example:
 
 Never convert an unrun check into a pass.
 
+When claiming an experimental or validation procedure is reproducible, replay its described setup and commands from a clean starting state when feasible. State relevant prerequisites, source/ref/branch state, generated parent directories, and execution or lifecycle order needed to reproduce it. If only part was replayed or a full replay was unavailable, identify what was verified and the remaining gap; do not claim complete reproducibility. This does not require unrelated tests or expensive experiments when reproducibility is not being claimed.
+
 ## Rules
 
 - Verification is evidence, not assumption.
