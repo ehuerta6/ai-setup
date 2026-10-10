@@ -52,7 +52,7 @@ skills:
   resume-review:
     status: testing
 
-  issue-batch-orchestrator:
+  issue-flow:
     status: testing
 
   ai-config-builder:
