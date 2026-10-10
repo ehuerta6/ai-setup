@@ -104,3 +104,10 @@ project_instructions:
 
   research-workspace:
     status: testing
+
+templates:
+  AGENT_TASK:
+    status: testing
+
+  CHAT_TASK:
+    status: testing
