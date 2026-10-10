@@ -48,11 +48,12 @@ SetupSmith adds **guided adoption and deterministic lifecycle management** to th
 
 ### 1. Bootstrap and analyze
 
-1. A user installs **only** `setup-ai` with a supported skills distribution mechanism and invokes `/setup-ai` in Codex or Claude Code.
+1. A user installs **only** `setup-ai` with a supported skills distribution mechanism and invokes `/setup-ai` in Codex or Claude Code. The initial setup must work without any other SetupSmith catalog skill or SetupSmith CLI already installed.
 2. The skill inspects existing project instructions (`AGENTS.md`, `CLAUDE.md` and related configuration), technology and repository metadata, relevant architecture/product docs, Git conventions, and the SetupSmith catalog. It reads selectively, not by indiscriminately loading the whole codebase.
 3. For an empty repository, it recommends only minimal immediately useful configuration. For an existing repository, it prioritizes understanding and preserving what is already there.
-4. The skill reuses `ai-config-builder` (bootstrap/adopt) and `project-audit` rather than duplicating those workflows.
-5. It does not require changing the canonical catalog's directory structure or credentials in the project.
+4. The skill reuses `ai-config-builder` (bootstrap/adopt) and `project-audit` rather than duplicating those workflows: it **loads their canonical instructions as needed**, through the user's accessible source checkout or source retrieval, instead of assuming those skills were installed during bootstrap.
+5. If the CLI is not available, initial read-only analysis and recommendations can still proceed. Before managed installation, the skill offers a verified CLI installation method and asks approval; it must not invent or silently execute an unverified installation command.
+6. If the canonical source cannot be reached and is not cached locally, it reports the missing information and cannot invent a complete or current recommendation set. It does not require changing the canonical catalog's directory structure or putting credentials in the project.
 
 ### 2. Recommend and select
 
@@ -70,7 +71,7 @@ Use assistant-native discovery locations, checking actual client support. Existi
 
 ### 4. Check and sync
 
-On demand, refresh or use an explicitly labeled cached source revision, and compare the canonical artifact, recorded baseline, and actual local installations. Report at minimum:
+On demand, refresh the **configured source branch/ref** (not an installer-selected latest release by accident), or use an explicitly labeled cached source revision, and compare the canonical artifact, recorded baseline, and actual local installations. Report at minimum:
 
 - current;
 - upstream update available;
@@ -94,9 +95,9 @@ The manifest records the state actually achieved, not merely the requested plan.
 
 ## Functional requirements
 
-**FR-01 — Git source and discovery.** Configure one canonical Git source; discover the current catalog without restructuring it. Discover skills from directories containing `SKILL.md`, and discover rules, agents, and templates from the corresponding source directories. Paths and file contents identify artifacts; `registry.yaml` supplies adoption/status metadata when present but is **not an exhaustive index** (it currently omits rules and templates). Report invalid/unsupported items individually, and capture immutable source revisions for comparisons. A compatible alternative source may provide explicit directory mappings.
+**FR-01 — Git source and discovery.** Configure one canonical Git source and its branch/ref (default to that repository's default branch); discover the current catalog without restructuring it. Discover skills from directories containing `SKILL.md`, and discover rules, agents, and templates from the corresponding source directories. Paths and file contents identify artifacts; `registry.yaml` supplies adoption/status metadata when present but is **not an exhaustive index** (it currently omits rules and templates). Report invalid/unsupported items individually, and capture immutable source revisions for comparisons. A compatible alternative source may provide explicit directory mappings.
 
-**FR-02 — Guided analysis.** `setup-ai` inspects only relevant project evidence; explains recommendations and delegates established analysis procedures to `ai-config-builder` and `project-audit`.
+**FR-02 — Guided analysis.** `setup-ai` inspects only relevant project evidence; explains recommendations and loads the canonical `ai-config-builder` and `project-audit` procedures on demand without requiring them to be separately installed. Analysis must work before the CLI is installed, with an actionable error if the necessary catalog cannot be accessed.
 
 **FR-03 — User choice.** Classify ADD/KEEP EXISTING/REPLACE/SKIP. Preserve project-specific behavior. User chooses exact artifacts and assistant targets.
 
@@ -116,7 +117,7 @@ The manifest records the state actually achieved, not merely the requested plan.
 
 **FR-11 — Interfaces.** Provide a standalone CLI for registration/initialization, listing, adding/adopting, checking, diffing, selectively updating, restoring, and explicitly removing managed items. Exact command names are a technical/design choice. `setup-ai` is a guided agent entry point to these capabilities, not a second implementation of file operations.
 
-**FR-12 — Approval boundary.** Read-only discovery needs no write approval. Every write affecting project files or manifests requires approval of the exact proposed change; an agent selecting items is not itself authorization. Installing a missing CLI/tool dependency also requires user approval.
+**FR-12 — Approval boundary.** Read-only discovery needs no write approval. Every write affecting project files or manifests requires approval of the exact proposed change; an agent selecting items is not itself authorization. Do not treat a non-interactive agent execution as human approval. The CLI must refuse unapproved non-interactive writes in the MVP. Installing a missing CLI/tool dependency also requires user approval.
 
 ## Constraints and invariants
 
@@ -133,6 +134,8 @@ The manifest records the state actually achieved, not merely the requested plan.
 | Case | Required behavior |
 | --- | --- |
 | User invokes setup on an already configured project | Inspect existing manifest and files; recommend updates/changes without duplicating managed files. |
+| Only `setup-ai` is installed; CLI and other catalog skills are absent | Read the needed canonical instructions on demand; analyze without the CLI; require approval before installing it for writes. |
+| Source unreachable and no local source/cache | Report that canonical recommendations or revision checks cannot be verified; do not silently substitute guesses. |
 | Existing file resembles a source skill but revision is unknown | Show possible match; allow explicit mapping; preserve content and unknown baseline. |
 | Global bootstrap skill also exists locally | Recognize possible duplicate and avoid installing the same item without purpose. |
 | Source has an update; local file was edited | Mark divergence and exclude from safe bulk update. |
@@ -153,7 +156,7 @@ The manifest records the state actually achieved, not merely the requested plan.
 - `setup-ai` is a **skill**, not a new orchestration agent or an MCP server.
 - Reuse `ai-config-builder` and `project-audit`; do not duplicate their adoption/audit procedures in the skill.
 - The CLI owns deterministic file changes and manifest state, while the agent owns contextual analysis/recommendations.
-- The initial bootstrap should reuse an existing verified skill installer (e.g. Vercel Skills or an official client plugin) rather than requiring our own bootstrap executable. Do not claim an example installation command works until `setup-ai` exists and is tested.
+- The initial bootstrap should reuse an existing verified skill installer (e.g. Vercel Skills or an official client plugin) rather than requiring our own bootstrap executable. The bootstrap installation method must work with **only** `setup-ai` and must not depend on the SetupSmith CLI. Do not claim an example installation command works until `setup-ai` exists and is tested.
 - Evaluate `gh skill`, `npx skills`, and native client mechanisms for reusable internals/behaviors before implementing an installer. Third-party behavior may not satisfy our diff/approval guarantees; our manager remains responsible for them.
 - Global bootstrap is supported, but complicated shared global/project profiles and system-wide update orchestration are outside MVP.
 - Technical details (language, manifest encoding, cache format, command spelling, adapter layout, reuse of existing installers) remain implementation choices, provided all requirements above are met.
@@ -174,7 +177,7 @@ A CLI is required; its exact spelling is not fixed by this specification. The `/
 
 ## Acceptance criteria
 
-- [ ] Installing only `setup-ai` allows an agent to begin guided setup in an existing Git project without installing the whole catalog.
+- [ ] Installing only `setup-ai` allows an agent to begin guided setup in an existing Git project without installing the whole catalog or preinstalling the SetupSmith CLI. It loads relevant canonical procedures on demand.
 - [ ] Analysis of CappyCode identifies existing AI configuration and recommends only relevant catalog items with ADD/KEEP EXISTING/REPLACE/SKIP rationale.
 - [ ] CappyHub can be analyzed independently and use a different adopted selection or revision.
 - [ ] An existing locally customized skill can be explicitly adopted without content loss or fabricated baseline.
@@ -182,7 +185,7 @@ A CLI is required; its exact spelling is not fixed by this specification. The `/
 - [ ] Approved installation produces a portable manifest with accurate canonical revisions and destinations.
 - [ ] A real changed upstream skill is detected and a concrete diff is shown.
 - [ ] Select All Safe omits locally modified, unknown-baseline, unmanaged-conflict, and unsupported items.
-- [ ] One batch approval changes exactly the selected managed installations; no approval means no write.
+- [ ] One batch approval changes exactly the selected managed installations; no approval means no write, including when invoked from an unattended agent or script.
 - [ ] Changes made after preview cause apply to refuse the stale proposal.
 - [ ] An upstream deletion does not remove the managed copy automatically.
 - [ ] Offline checks show exactly which cached revision was used and its freshness limit.
@@ -192,7 +195,7 @@ A CLI is required; its exact spelling is not fixed by this specification. The `/
 
 ## Verification
 
-1. Exercise fresh and already-configured setups in CappyCode and CappyHub without modifying their product-specific instructions during discovery.
+1. Exercise fresh and already-configured setups in CappyCode and CappyHub, beginning with only `setup-ai` installed; verify canonical procedure loading and recommendation generation without a preinstalled CLI, and no project-file writes during discovery.
 2. Demonstrate one real canonical skill revision change and independent opt-in updates in both projects.
 3. Modify one installed skill locally and verify safe-update exclusion, diff correctness, and preserved content.
 4. Simulate occupied unmanaged paths, missing files, upstream deletion, stale proposals, network failure, and a failure halfway through a two-assistant update.
