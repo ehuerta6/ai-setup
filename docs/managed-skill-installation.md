@@ -1,6 +1,6 @@
 # Managed skill installation
 
-SetupSmith's standalone CLI supports deterministic, project-local installation of selected skills, explicit adoption of existing skills, read-only checks and diffs, and explicitly approved safe updates. These commands do not require an LLM or the `setup-ai` skill. Managed removal is not implemented.
+SetupSmith's standalone CLI supports deterministic, project-local installation of selected skills, explicit adoption of existing skills, read-only checks and diffs, explicitly approved safe updates, and manifest-based restoration of verified skills. These commands do not require an LLM or the `setup-ai` skill. Managed removal is not implemented.
 
 ## Commands
 
@@ -143,6 +143,19 @@ An artifact is excluded from `--all-safe` when its baseline is unknown, a record
 
 After confirmation, SetupSmith re-resolves each configured ref, checks that its revision, manifest, and every selected destination still match the approved preview, stages and hashes complete trees, then replaces all targets for each selected artifact and advances only those manifest baselines. A changed source ref, destination, or manifest makes the preview stale and refuses application. Repeating an update after the target revision is recorded is a no-op. On an application failure, the CLI attempts to restore replaced target trees and the prior manifest and reports rollback failures. This is not the advanced multi-target recovery workflow tracked separately in Issue #16.
 
+## Restore from a committed manifest
+
+In a fresh project clone, reconstruct missing supported targets from the exact immutable revisions recorded in `.setupsmith/manifest.json`:
+
+```sh
+python3 scripts/setupsmith.py restore --project /path/to/project --preview-only
+python3 scripts/setupsmith.py restore --project /path/to/project
+```
+
+The preview names each artifact, pinned revision, digest, assistant destination, and every file to add. The manifest remains unchanged. The applying command requires typing `RESTORE` in a terminal; noninteractive writes are refused. SetupSmith fetches the recorded commit directly and verifies its complete file tree against the manifest. It never substitutes the configured ref's current revision. If the pinned commit is unavailable, or retrieved content disagrees with recorded hashes, restore reports the conflict and refuses the batch.
+
+Only recorded Codex (`.agents/skills/<name>/`) and Claude Code (`.claude/skills/<name>/`) destinations are reconstructed. Adopted targets keep their recorded safe local path. Existing destinations that match the verified baseline are no-ops; occupied destinations with different content and unsafe paths or symlinks block restoration. Unknown-baseline customizations cannot be reconstructed from canonical history; present files are preserved, and missing custom content must be supplied separately. Legacy and other unsupported targets are reported without being described as restored. Repeating a successful restore does not rewrite files or the manifest.
+
 ### Schema-1 adoption fields
 
 The checker accepts the shared schema-1 contract for explicit adoption. Existing Issue #11 entries without `baseline_state` and target `adoption` fields remain verified installations. Adopted targets carry `adoption: "adopted"`; their target path may have a safe local basename that differs from the canonical artifact ID while remaining in the recorded assistant-specific layout. Installed targets retain the canonical basename. Verified entries identify the canonical commit and full-tree hashes. Unknown-baseline entries have `baseline_state: "unknown"`, `revision: null`, and observed file hashes. A configured ref may be null if it was not known. Observed hashes help detect changes after adoption but do not establish canonical history. This additive contract does not reinterpret older manifests.
@@ -156,4 +169,4 @@ The checker accepts the shared schema-1 contract for explicit adoption. Existing
 - Repeating an unchanged installation is a no-op, including no manifest rewrite.
 - Installation refuses a managed skill whose files have changed; `check` reports `LOCAL_DIVERGENCE` and `diff` shows the changes without repairing them.
 - Local source paths are accepted only when their Git repository has a credential-free portable `origin` URL; that URL is what the manifest records.
-- Global installation, background source refresh, update application, sync, removal, and multi-target update recovery are out of scope.
+- Global installation, background synchronization, managed removal, and advanced multi-target update recovery are out of scope.

@@ -814,6 +814,165 @@ def fetch_baseline_tree(repository: Path, revision: str, temporary: Path) -> Pat
     return baseline
 
 
+def fetch_pinned_repository(source: str, revision: str, checkout: Path) -> Path:
+    """Fetch exactly one manifest-pinned commit and check out its bytes."""
+    validate_source_argument(source)
+    git("init", "-q", str(checkout))
+    git("-C", str(checkout), "remote", "add", "origin", source)
+    git("-C", str(checkout), "fetch", "--quiet", "--no-tags", "origin", revision)
+    resolved = git("-C", str(checkout), "rev-parse", "FETCH_HEAD^{commit}")
+    if resolved != revision:
+        raise CheckError(f"source returned {resolved} instead of pinned revision {revision}")
+    git("-C", str(checkout), "checkout", "--quiet", "--detach", revision)
+    return checkout
+
+
+def restore_project(args: argparse.Namespace) -> int:
+    with tempfile.TemporaryDirectory(prefix="setupsmith-restore-source-") as temporary_name:
+        return _restore_project(args, Path(temporary_name))
+
+
+def _restore_project(args: argparse.Namespace, source_temporary: Path) -> int:
+    """Reconstruct missing verified managed destinations from pinned commits."""
+    project_arg = Path(args.project).expanduser()
+    if not project_arg.is_dir():
+        raise CheckError(f"target project does not exist: {args.project}")
+    try:
+        root = Path(git("rev-parse", "--show-toplevel", cwd=project_arg)).resolve()
+    except DiscoveryError as exc:
+        raise CheckError("target must be inside a Git project") from exc
+    manifest_rel = Path(".setupsmith/manifest.json")
+    ensure_no_symlink_components(root, manifest_rel)
+    manifest_path = root / manifest_rel
+    manifest = load_check_manifest(manifest_path)
+    manifest_bytes = manifest_path.read_bytes()
+    work: list[dict] = []
+    noops: list[dict] = []
+    blocked = False
+    for index, entry in enumerate(manifest["artifacts"]):
+        artifact = entry["id"]
+        if entry.get("baseline_state", "verified") != "verified":
+            print(f"{artifact}: UNKNOWN_BASELINE; custom content cannot be reconstructed from source; "
+                  "existing files are preserved and missing custom files must be supplied separately")
+            continue
+        supported = [t for t in entry["targets"] if t["assistant"] in {"codex", "claude-code"}]
+        for target in entry["targets"]:
+            if target["assistant"] not in {"codex", "claude-code"}:
+                print(f"{artifact}: UNSUPPORTED_TARGET {target['assistant']} at {target['path']}")
+        if not supported:
+            continue
+        try:
+            checkout = source_temporary / f"source-{index}"
+            fetch_pinned_repository(entry["source"], entry["revision"], checkout)
+            source_tree = checkout / artifact
+            digest, hashes, files = content_tree(source_tree)
+            if digest != entry["content_digest"] or hashes != entry["files"]:
+                raise CheckError(f"pinned source content disagrees with the manifest for {artifact}")
+        except (DiscoveryError, InstallError, CheckError, OSError) as exc:
+            blocked = True
+            print(f"{artifact}: SOURCE_UNAVAILABLE_OR_CONFLICT: {exc}")
+            continue
+        for target in supported:
+            relative = Path(*PurePosixPath(target["path"]).parts)
+            try:
+                ensure_no_symlink_components(root, relative)
+                destination = root / relative
+                if destination.exists() or destination.is_symlink():
+                    current_digest, current_hashes, _ = content_tree(destination)
+                    if current_digest == entry["content_digest"] and current_hashes == entry["files"]:
+                        noops.append({"path": target["path"], "relative": relative,
+                                      "digest": entry["content_digest"], "files": entry["files"]})
+                        continue
+                    print(f"{artifact}: DESTINATION_CONFLICT {target['path']} is occupied with different content")
+                    blocked = True
+                    continue
+                work.append({"artifact": artifact, "entry": entry, "target": target,
+                             "relative": relative, "source_tree": source_tree,
+                             "digest": digest, "hashes": hashes, "files": files})
+            except (InstallError, OSError) as exc:
+                blocked = True
+                print(f"{artifact}: DESTINATION_CONFLICT {target['path']}: {exc}")
+
+    if noops:
+        print("Already restored and verified: " + ", ".join(sorted(item["path"] for item in noops)))
+    if blocked:
+        print("Restore blocked by a source, content, or destination conflict; no project files changed.")
+        return 2
+    print("\nSetupSmith restore preview")
+    print(f"Manifest: {Path('.setupsmith/manifest.json')} (preserved)")
+    for plan in work:
+        entry, target = plan["entry"], plan["target"]
+        print(f"{plan['artifact']} revision {entry['revision']} sha256 {plan['digest']}")
+        print(f"  source: {entry['source']}\n  assistant: {target['assistant']}\n  destination: {target['path']}")
+        for path in plan["files"]:
+            data = plan["source_tree"].joinpath(*PurePosixPath(path).parts).read_bytes()
+            print(f"  + {target['path']}/{path} ({len(data)} bytes, sha256 {hashes_for_bytes(data)})")
+    if not work:
+        print("No verified missing destinations to restore; no project files changed.")
+        return 0
+    if args.preview_only:
+        print("Preview only; no project files changed.")
+        return 0
+    if not sys.stdin.isatty():
+        raise CheckError("restore requires interactive terminal approval; preview the plan and rerun interactively")
+    if input("Type RESTORE to reconstruct the verified missing destinations: ") != "RESTORE":
+        print("Declined; no project files changed.")
+        return 0
+
+    with tempfile.TemporaryDirectory(prefix=".setupsmith-restore-", dir=root) as temporary_name:
+        temporary = Path(temporary_name)
+        ensure_no_symlink_components(root, manifest_rel)
+        if manifest_path.read_bytes() != manifest_bytes:
+            raise CheckError("stale preview: manifest changed; preview again")
+        for item in noops:
+            ensure_no_symlink_components(root, item["relative"])
+            destination = root / item["relative"]
+            if not destination.exists() or content_tree(destination)[:2] != (item["digest"], item["files"]):
+                raise CheckError(f"stale preview: already-restored destination changed: {item['path']}")
+        stages = []
+        for index, plan in enumerate(work):
+            ensure_no_symlink_components(root, plan["relative"])
+            destination = root / plan["relative"]
+            if destination.exists() or destination.is_symlink():
+                raise CheckError(f"stale preview: destination became occupied: {plan['target']['path']}")
+            stage = temporary / f"staged-{index}"
+            shutil.copytree(plan["source_tree"], stage, symlinks=False)
+            if tree_identity(stage)[0] != plan["digest"]:
+                raise CheckError(f"staged content verification failed: {plan['artifact']}")
+            stages.append((plan, stage))
+        completed = []
+        try:
+            for plan, stage in stages:
+                ensure_no_symlink_components(root, plan["relative"])
+                destination = root / plan["relative"]
+                if destination.exists() or destination.is_symlink():
+                    raise CheckError(f"stale preview: destination became occupied: {plan['target']['path']}")
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                ensure_no_symlink_components(root, plan["relative"])
+                os.replace(stage, destination)
+                completed.append((destination, plan["digest"]))
+                if tree_identity(destination)[0] != plan["digest"]:
+                    raise InstallError(f"restored content verification failed: {plan['target']['path']}")
+        except Exception as exc:
+            rollback = []
+            for destination, expected in reversed(completed):
+                try:
+                    if tree_identity(destination)[0] == expected:
+                        shutil.rmtree(destination)
+                    else:
+                        rollback.append(f"preserved concurrent changes at {destination.relative_to(root)}")
+                except OSError as error:
+                    rollback.append(f"could not remove {destination.relative_to(root)}: {error}")
+            detail = "; ".join(rollback) if rollback else "completed writes were removed"
+            raise InstallError(f"restore failed: {exc}; {detail}") from exc
+    print("Restored and verified: " + ", ".join(plan["target"]["path"] for plan in work))
+    return 0
+
+
+def hashes_for_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
 def text_bytes(value: bytes) -> str | None:
     try:
         rendered = value.decode("utf-8")
@@ -1521,7 +1680,7 @@ def install(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Discover, install, adopt, check, diff, and update SetupSmith skills")
+    parser = argparse.ArgumentParser(description="Discover, install, adopt, check, diff, update, and restore SetupSmith skills")
     sub = parser.add_subparsers(dest="command", required=True)
     command = sub.add_parser("discover", help="discover catalog artifacts from a Git source")
     command.add_argument("--source", required=True, help="Git repository locator")
@@ -1553,6 +1712,9 @@ def main(argv: list[str] | None = None) -> int:
     selection.add_argument("--all-safe", action="store_true", help="select all eligible updates")
     selection.add_argument("--none", action="store_true", help="select no updates")
     update_command.add_argument("--preview-only", action="store_true", help="show selection and preview without approval or writes")
+    restore_command = sub.add_parser("restore", help="reconstruct verified managed skills from pinned manifest revisions")
+    restore_command.add_argument("--project", required=True, help="existing target Git project")
+    restore_command.add_argument("--preview-only", action="store_true", help="show missing destinations without prompting or writing")
     args = parser.parse_args(argv)
     try:
         if args.command in {"discover", "install"}:
@@ -1563,6 +1725,8 @@ def main(argv: list[str] | None = None) -> int:
             return adopt(args)
         if args.command == "update":
             return update_project(args)
+        if args.command == "restore":
+            return restore_project(args)
         if args.command in {"check", "diff"}:
             return check_project(args, include_text=args.command == "diff")
         with tempfile.TemporaryDirectory(prefix="setupsmith-discovery-") as temporary:
