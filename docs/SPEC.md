@@ -1,6 +1,6 @@
 # Spec: SetupSmith MVP
 
-**Status:** Draft for user approval (product decisions consolidated; no implementation yet)  
+**Status:** Approved product scope; pending implementation and technical validation  
 **Date:** 2026-10-10  
 **Canonical repository:** [ehuerta6/setup-smith](https://github.com/ehuerta6/setup-smith) (formerly `ehuerta6/ai-setup`)  
 **Initial validation projects:** [CappyCode](https://github.com/ehuerta6/cappy-code) and [CappyHub](https://github.com/ehuerta6/cappy-hub)
