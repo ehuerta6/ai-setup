@@ -855,6 +855,107 @@ class SkillCheckTests(unittest.TestCase):
         entry = json.loads(self.manifest_path.read_text())["artifacts"][0]
         self.assertEqual(entry["targets"], [{"assistant": "claude-code", "path": ".claude/skills/guide", "state": "installed"}])
 
+    def test_recovery_reconciliation_and_removal_preserve_backup_and_sibling(self):
+        import shutil
+        revision_b = self.push_revision_b(skill_text="Guide B line.\n")
+        codex = self.project / ".agents/skills/guide"
+        backup = self.project / ".setupsmith-recovery-integration" / "backup-0"
+        backup.parent.mkdir()
+        shutil.copytree(codex, backup)
+        codex_skill = codex / "SKILL.md"
+        codex_skill.write_text(codex_skill.read_text() + "concurrent edit\n", encoding="utf-8")
+        manifest = json.loads(self.manifest_path.read_text(encoding="utf-8"))
+        codex_target = next(target for target in manifest["artifacts"][0]["targets"]
+                            if target["assistant"] == "codex")
+        codex_target["recovery"] = {
+            "state": "incomplete",
+            "observed_state": "present",
+            "observed_digest": SETUPSMITH.tree_identity(codex)[0],
+            "recovery_path": backup.relative_to(self.project).as_posix(),
+        }
+        self.manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
+        code, report, errors = self.run_command()
+        self.assertEqual(code, 0, errors)
+        self.assertIn("RECOVERY_INCOMPLETE", report)
+        before_refusal = self.manifest_path.read_bytes()
+        backup_digest = SETUPSMITH.tree_identity(backup)[0]
+        code, _, errors = self.run_remove(["skills/guide=.agents/skills/guide"], preview=True)
+        self.assertEqual(code, 2)
+        self.assertIn("locally changed or unexpected content", errors)
+        self.assertTrue(codex_skill.exists())
+        self.assertEqual(self.manifest_path.read_bytes(), before_refusal)
+        self.assertEqual(SETUPSMITH.tree_identity(backup)[0], backup_digest)
+        self.assertEqual(json.loads(before_refusal)["artifacts"][0]["revision"], self.revision_a)
+
+        shutil.rmtree(codex)
+        shutil.copytree(backup, codex)
+        code, report, errors = self.run_command()
+        self.assertEqual(code, 0, errors)
+        self.assertNotIn("RECOVERY_INCOMPLETE", report)
+        code, output, errors = self.run_update(selection=("--skill", "guide"), response="UPDATE")
+        self.assertEqual(code, 0, errors)
+        self.assertIn("Updated successfully", output)
+        updated = json.loads(self.manifest_path.read_text(encoding="utf-8"))["artifacts"][0]
+        self.assertEqual(updated["revision"], revision_b)
+        self.assertTrue(all("recovery" not in target for target in updated["targets"]))
+        self.assertEqual(SETUPSMITH.tree_identity(backup)[0], backup_digest)
+        code, report, errors = self.run_command()
+        self.assertEqual(code, 0, errors)
+        self.assertNotIn("RECOVERY_INCOMPLETE", report)
+
+        code, output, errors = self.run_remove(["skills/guide=.agents/skills/guide"])
+        self.assertEqual(code, 0, errors)
+        self.assertIn("destinations remaining: .claude/skills/guide", output)
+        self.assertFalse(codex.exists())
+        self.assertTrue((self.project / ".claude/skills/guide/SKILL.md").is_file())
+        remaining = json.loads(self.manifest_path.read_text(encoding="utf-8"))["artifacts"][0]
+        self.assertEqual(remaining["revision"], revision_b)
+        self.assertEqual(len(remaining["targets"]), 1)
+        self.assertEqual(remaining["targets"][0]["assistant"], "claude-code")
+        self.assertNotIn("recovery", remaining["targets"][0])
+        self.assertEqual(SETUPSMITH.tree_identity(backup)[0], backup_digest)
+        code, report, errors = self.run_command()
+        self.assertEqual(code, 0, errors)
+        self.assertNotIn("RECOVERY_INCOMPLETE", report)
+
+    def test_removing_one_target_preserves_sibling_recovery_marker_and_backup(self):
+        import shutil
+        sibling = self.project / ".claude/skills/guide"
+        backup = self.project / ".setupsmith-recovery-sibling" / "backup-0"
+        backup.parent.mkdir()
+        shutil.copytree(sibling, backup)
+        sibling_skill = sibling / "SKILL.md"
+        sibling_skill.write_text(sibling_skill.read_text() + "concurrent edit\n", encoding="utf-8")
+        manifest = json.loads(self.manifest_path.read_text(encoding="utf-8"))
+        sibling_target = next(target for target in manifest["artifacts"][0]["targets"]
+                              if target["assistant"] == "claude-code")
+        sibling_target["recovery"] = {
+            "state": "incomplete",
+            "observed_state": "present",
+            "observed_digest": SETUPSMITH.tree_identity(sibling)[0],
+            "recovery_path": backup.relative_to(self.project).as_posix(),
+        }
+        self.manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
+        code, report, errors = self.run_command()
+        self.assertEqual(code, 0, errors)
+        self.assertIn("RECOVERY_INCOMPLETE", report)
+        backup_digest = SETUPSMITH.tree_identity(backup)[0]
+        code, output, errors = self.run_remove(["skills/guide=.agents/skills/guide"])
+        self.assertEqual(code, 0, errors)
+        self.assertIn("destinations remaining: .claude/skills/guide", output)
+        self.assertFalse((self.project / ".agents/skills/guide").exists())
+        self.assertIn("concurrent edit", sibling_skill.read_text(encoding="utf-8"))
+        self.assertEqual(SETUPSMITH.tree_identity(backup)[0], backup_digest)
+        remaining = json.loads(self.manifest_path.read_text(encoding="utf-8"))["artifacts"][0]
+        self.assertEqual(remaining["revision"], self.revision_a)
+        self.assertEqual(remaining["targets"], [sibling_target])
+        code, report, errors = self.run_command()
+        self.assertEqual(code, 0, errors)
+        self.assertIn("RECOVERY_INCOMPLETE", report)
+        self.assertIn("recovery_path", report)
+
     def test_remove_final_target_preserves_unrelated_manifest_entry(self):
         manifest = json.loads(self.manifest_path.read_text())
         other = dict(manifest["artifacts"][0], id="skills/other", targets=[
