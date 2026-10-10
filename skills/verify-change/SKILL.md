@@ -40,6 +40,8 @@ Inspect the repository for configured validation such as:
 
 Use project-provided commands instead of inventing replacements.
 
+Before running checks in parallel, identify shared generated files. Sequence checks when one creates, regenerates, or removes files another consumes; parallelize independent checks when safe.
+
 ### 3. Run focused checks
 
 During iteration, prefer the smallest check that exercises the changed behavior.
@@ -75,6 +77,8 @@ Verify that the diff contains:
 - no credentials or secrets;
 - no unexplained dependency additions;
 - tests when behavior changed.
+
+For documentation changes, check behavior and deployment claims against current code and accepted decisions. Distinguish dated deployment observations from current state, and validate relevant internal links and anchors when practical.
 
 ### 6. Report evidence
 
