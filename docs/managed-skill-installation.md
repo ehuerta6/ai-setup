@@ -1,6 +1,6 @@
 # Managed skill installation
 
-SetupSmith's standalone CLI supports deterministic, project-local installation of selected skills, explicit adoption of existing skills, and read-only checks and diffs. These commands do not require an LLM or the `setup-ai` skill. Sync, update application, and removal are not implemented.
+SetupSmith's standalone CLI supports deterministic, project-local installation of selected skills, explicit adoption of existing skills, read-only checks and diffs, and explicitly approved safe updates. These commands do not require an LLM or the `setup-ai` skill. Managed removal is not implemented.
 
 ## Commands
 
@@ -127,6 +127,21 @@ States can appear together. For example, a target can have both `UPSTREAM_UPDATE
 The checker does not maintain an offline cache. If the configured source is unavailable, it reports `SOURCE_UNAVAILABLE`, identifies any local changes detectable from manifest hashes, and says that no cache was used. It does not claim the source is current or invent a revision. If no ref was recorded for an unknown-baseline entry, it will not select the source's default branch on the user's behalf.
 
 Checks and diffs do not create a manifest, change installed files, write project instructions, apply updates, or remove upstream-deleted skills. The checker exits with an error for malformed manifest data or when the manifest's claimed verified baseline does not match the recorded immutable source revision.
+
+## Selective updates
+
+`update` uses the manifest's configured source/ref and the checker's verified baseline and local file comparisons. Choose one or more safe artifacts explicitly:
+
+```sh
+python3 scripts/setupsmith.py update --project /path/to/project --skill research-and-compare
+python3 scripts/setupsmith.py update --project /path/to/project --skill research-and-compare --skill review-pr
+```
+
+Use `--all-safe` to select every eligible update or `--none` to select none. The command first prints the check report, the selected revisions and destinations, each added, modified, or removed file, relevant text patches, binary hashes, and manifest fields to update. `--preview-only` prints the complete selection and exits without prompting or writing. Selection is not approval: an applying invocation requires typing `UPDATE` exactly for the whole selected batch. A noninteractive applying invocation is refused.
+
+An artifact is excluded from `--all-safe` when its baseline is unknown, a recorded target is missing, locally changed, unsafe, or unsupported, the source or pinned baseline cannot be verified, the upstream artifact was removed, or any target in its managed target set is unsafe. Requesting an excluded artifact explicitly is refused. A no-update artifact is not selected as work. Upstream removal never deletes an installed skill.
+
+After confirmation, SetupSmith re-resolves each configured ref, checks that its revision, manifest, and every selected destination still match the approved preview, stages and hashes complete trees, then replaces all targets for each selected artifact and advances only those manifest baselines. A changed source ref, destination, or manifest makes the preview stale and refuses application. Repeating an update after the target revision is recorded is a no-op. On an application failure, the CLI attempts to restore replaced target trees and the prior manifest and reports rollback failures. This is not the advanced multi-target recovery workflow tracked separately in Issue #16.
 
 ### Schema-1 adoption fields
 
