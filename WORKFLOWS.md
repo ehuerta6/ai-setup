@@ -1,6 +1,6 @@
 # Workflows
 
-Scenario-based guide for using the existing SetupSmith configuration catalog. The CLI supports read-only catalog discovery and managed-skill checks/diffs, explicitly approved project-local skill installation, and adoption of existing skills. `setup-ai` supports read-only Analyze → Recommend. Update application, synchronization, and removal are not implemented yet.
+Scenario-based guide for using the existing SetupSmith configuration catalog. The CLI supports read-only catalog discovery and managed-skill checks/diffs, plus explicitly approved project-local skill installation, adoption of existing skills, selective updates, restoration from a committed manifest, and managed removal. `setup-ai` guides Analyze → Recommend → Install → on-demand Sync through the CLI. Sync runs only on request, and every managed write requires the CLI's interactive approval; background synchronization is not implemented.
 
 These routes are suggestions, not a required sequence. Use only the steps that help with the task. For a single reusable workflow, load its skill; for durable multi-chat context, start from a Project Instruction preset.
 
@@ -293,7 +293,7 @@ The source's advertised default branch is used when `--ref` is omitted. Pass `--
 
 ## Guided analysis
 
-Install only the `setup-ai` skill from `skills/setup-ai/`. Invoke it with `$setup-ai` or select it through `/skills` in Codex, and use `/setup-ai` in Claude Code. These are client-specific native invocation forms; Codex does not provide a `/setup-ai` slash command. The skill analyzes and recommends without changing project files. Managed installation and synchronization are not available yet.
+Install only the `setup-ai` skill from `skills/setup-ai/`. Invoke it with `$setup-ai` or select it through `/skills` in Codex, and use `/setup-ai` in Claude Code. These are client-specific native invocation forms; Codex does not provide a `/setup-ai` slash command. The skill can analyze and recommend read-only when the CLI is absent. When a verified CLI checkout is available, it can preview selected skill installation, run read-only checks and diffs, and guide explicitly approved selective updates through the CLI. Restoration and removal are available as explicit CLI operations. Rules, agents, templates, and Project Instructions remain reference-only. If interactive CLI confirmation cannot be surfaced, give the user the exact reviewed command to run in a terminal. Never treat a recommendation as authorization or run synchronization in the background.
 
 
 ## Durable decision
