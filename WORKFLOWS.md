@@ -1,6 +1,6 @@
 # Workflows
 
-Scenario-based guide for using the existing SetupSmith configuration catalog. The planned `setup-ai` onboarding and synchronization CLI are not implemented; until then, use the existing manual adoption and audit workflows.
+Scenario-based guide for using the existing SetupSmith configuration catalog. The CLI currently supports read-only catalog discovery; `setup-ai` analysis and managed installation/synchronization are not implemented yet.
 
 These routes are suggestions, not a required sequence. Use only the steps that help with the task. For a single reusable workflow, load its skill; for durable multi-chat context, start from a Project Instruction preset.
 
@@ -25,6 +25,7 @@ These routes are suggestions, not a required sequence. Use only the steps that h
 | Preparing a commit, PR, or merge | [Git and GitHub delivery](#git-and-github-delivery) |
 | Handing work to another chat or agent | [Continue work elsewhere](#continue-work-elsewhere) |
 | Creating reusable AI configuration | [Need new AI configuration](#need-new-ai-configuration) |
+| Listing catalog artifacts from a Git source | [Catalog discovery](#catalog-discovery) |
 | Improving an existing workflow | [Workflow improvement](#workflow-improvement) |
 
 ## Only an idea
@@ -278,6 +279,16 @@ Use evidence from actual work to decide whether something should:
 - remain unchanged.
 
 Testing a workflow does not make it accepted or default.
+
+## Catalog discovery
+
+Use the read-only CLI to enumerate skills, agents, rules, and templates at a Git revision:
+
+```sh
+python3 scripts/setupsmith.py discover --source https://github.com/ehuerta6/setupsmith.git
+```
+
+The source's advertised default branch is used when `--ref` is omitted. Pass `--ref <branch-or-tag-or-revision>` to choose a specific Git ref. The JSON report includes the immutable resolved commit, source catalog status when registered, missing metadata, and any errors or warnings. Exit status 2 means discovery was incomplete or failed. Discovery does not install artifacts or write to the target project.
 
 
 ## Durable decision
