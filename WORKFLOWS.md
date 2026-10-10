@@ -1,6 +1,6 @@
 # Workflows
 
-Scenario-based guide for using `ai-setup`.
+Scenario-based guide for using the existing SetupSmith configuration catalog. The planned `setup-ai` onboarding and synchronization CLI are not implemented; until then, use the existing manual adoption and audit workflows.
 
 These routes are suggestions, not a required sequence. Use only the steps that help with the task. For a single reusable workflow, load its skill; for durable multi-chat context, start from a Project Instruction preset.
 
@@ -103,7 +103,7 @@ Audit for:
 - duplication;
 - conflicts;
 - missing reusable configuration;
-- reusable behavior that belongs in ai-setup.
+- reusable behavior that belongs in the SetupSmith catalog.
 
 
 ## New ChatGPT or Claude Project
@@ -273,7 +273,7 @@ retro
 Use evidence from actual work to decide whether something should:
 
 - stay project-specific;
-- change in ai-setup;
+- change in the SetupSmith catalog;
 - become automated;
 - remain unchanged.
 

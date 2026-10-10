@@ -1,6 +1,8 @@
-# AI Setup
+# SetupSmith
 
-This repository is the canonical source for reusable AI-assisted software engineering configuration, with selected workflows for research, writing, learning, and long-running AI workspaces.
+This repository is the canonical source for reusable AI-assisted software engineering configuration, with selected research, writing, learning, and multi-chat workflows. SetupSmith also plans guided per-project recommendation, installation, version tracking, and safe selective updates.
+
+For product-development work, read [docs/SPEC.md](docs/SPEC.md). The `setup-ai` skill and SetupSmith CLI are **not implemented yet**; do not claim their proposed commands work. Catalog maintenance remains a separate, equally valid responsibility.
 
 ## Context
 
@@ -47,6 +49,6 @@ Testing does not imply adoption.
 
 ## This repository
 
-`ai-setup` is a personal configuration repository and currently permits direct work on `main`.
+`setup-smith` is a personal configuration repository and currently permits direct work on `main`.
 
 Do not apply that exception to other repositories unless they explicitly say so.
