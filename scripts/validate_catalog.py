@@ -23,6 +23,8 @@ def registry_names(section: str) -> set[str]:
 def check_registry_metadata(errors: list[str]) -> None:
     text = (ROOT / "registry.yaml").read_text(encoding="utf-8")
     valid_statuses = {"testing", "accepted", "rejected", "default", "replaced"}
+    if re.search(r"^\s+(?:source|inspired_by|adapted_from|origin|provenance):", text, re.M):
+        fail(errors, "registry contains provenance-only metadata")
     for section in ("skills", "agents", "project_instructions"):
         names = registry_names(section)
         section_match = re.search(rf"^{section}:\s*$(.*?)(?=^[A-Za-z_]+:|\Z)", text, re.M | re.S)
@@ -31,11 +33,8 @@ def check_registry_metadata(errors: list[str]) -> None:
             entry = re.search(rf"^  {re.escape(name)}:\s*$(.*?)(?=^  [\w-]+:|\Z)", body, re.M | re.S)
             data = entry.group(1) if entry else ""
             status = re.search(r"^    status:\s*(\S+)\s*$", data, re.M)
-            source = re.search(r"^    source:\s*\S.*$", data, re.M)
             if not status or status.group(1) not in valid_statuses:
                 fail(errors, f"registry {section}.{name} has missing or invalid status")
-            if not source:
-                fail(errors, f"registry {section}.{name} is missing source provenance")
 
 
 def check_registry_files(errors: list[str], section: str, directory: str, pattern: str) -> None:
@@ -61,14 +60,22 @@ def main() -> int:
             continue
         metadata = parts[1]
         name = re.search(r"^name:\s*([^\s#]+)\s*$", metadata, re.M)
-        description = re.search(r"^description:\s*\S.*$", metadata, re.M)
+        description = re.search(r"^description:\s*(.*?)\s*$", metadata, re.M)
         expected = path.parent.name
         if not name:
             fail(errors, f"{path.relative_to(ROOT)} is missing a valid name field")
-        elif name.group(1) != expected:
-            fail(errors, f"{path.relative_to(ROOT)} name '{name.group(1)}' does not match directory '{expected}'")
-        if not description:
-            fail(errors, f"{path.relative_to(ROOT)} is missing a description field")
+        else:
+            skill_name = name.group(1)
+            if len(skill_name) > 64 or not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", skill_name):
+                fail(errors, f"{path.relative_to(ROOT)} name does not meet Agent Skills naming requirements")
+            if skill_name != expected:
+                fail(errors, f"{path.relative_to(ROOT)} name '{skill_name}' does not match directory '{expected}'")
+        if not description or not description.group(1):
+            fail(errors, f"{path.relative_to(ROOT)} is missing a valid description field")
+        elif len(description.group(1)) > 1024:
+            fail(errors, f"{path.relative_to(ROOT)} description exceeds 1024 characters")
+        if re.search(r"^metadata:\s*(?:#.*)?$", metadata, re.M):
+            fail(errors, f"{path.relative_to(ROOT)} has empty metadata; omit it or provide string key-value fields")
 
     check_registry_files(errors, "skills", "skills", "*/SKILL.md")
     check_registry_files(errors, "agents", "agents", "*.md")

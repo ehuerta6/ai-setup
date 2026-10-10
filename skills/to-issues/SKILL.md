@@ -1,8 +1,6 @@
 ---
 name: to-issues
 description: Break an approved spec or large feature into focused, connected GitHub Issues that can be implemented independently by fresh agents.
-metadata:
-  inspired_by: mattpocock/skills to-tickets
 ---
 
 # To issues

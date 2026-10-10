@@ -1,10 +1,6 @@
 ---
 name: unslop
 description: Audit and clean technical writing so it becomes concrete, concise, credible, and free of formulaic AI prose without changing supported facts.
-metadata:
-  adapted_from:
-    - cursor/plugins pstack unslop
-    - theclaymethod/unslop
 ---
 
 # Unslop

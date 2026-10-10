@@ -1,9 +1,6 @@
 ---
 name: retro
 description: Review completed AI-assisted engineering work to identify concrete improvements to skills, rules, context, tooling, and automated checks.
-metadata:
-  adapted_from:
-    - mattpocock/skills retro
 ---
 
 # Retro
@@ -26,6 +23,8 @@ Review the relevant:
 - verification results;
 - review findings;
 - failures and rework.
+
+When evaluating reusable configuration, record the artifact and the real task where it was used, plus the observed result or friction. If it has not been used in a real task, say it remains untested; passing a validator is not usage evidence.
 
 ### 2. Identify friction
 

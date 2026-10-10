@@ -2,63 +2,30 @@
 
 Scenario-based guide for using `ai-setup`.
 
-These are recommended routes, not mandatory pipelines.
-
-Use the smallest workflow that fits the current task.
+These routes are suggestions, not a required sequence. Use only the steps that help with the task. For a single reusable workflow, load its skill; for durable multi-chat context, start from a Project Instruction preset.
 
 ## Router
 
-Only have an idea?
-→ Idea discovery
-
-Know what to build but have not started?
-→ New project
-
-Have an empty repo that needs minimal AI configuration?
-→ Bootstrap
-
-Already have a defined or existing project?
-→ Project adoption
-
-Project already uses AI configuration?
-→ Project audit
-
-Working from a spec?
-→ Spec workflow
-
-Working from one issue?
-→ Issue workflow
-
-Working on several related issues?
-→ Batch workflow
-
-Found a bug?
-→ Debug workflow
-
-Need better tests?
-→ Testing workflow
-
-Need independent review?
-→ Review workflow
-
-Need Git or GitHub delivery?
-→ GitHub workflow
-
-Starting a ChatGPT or Claude Project?
-→ AI workspace workflow
-
-Researching a question or comparing options?
-→ Research workflow
-
-Moving work to another chat or agent?
-→ Handoff
-
-Need new reusable AI configuration?
-→ AI config workflow
-
-Want to improve the workflow itself?
-→ Retro
-
+| If you're... | Go to |
+| --- | --- |
+| Starting with an idea | [Only an idea](#only-an-idea) |
+| Planning a product that has not started | [Product defined, project not started](#product-defined-project-not-started) |
+| Setting up AI in an empty repo | [Empty repo needs minimal AI setup](#empty-repo-needs-minimal-ai-setup) |
+| Adopting configuration into an existing project | [Existing project adoption](#existing-project-adoption) |
+| Reviewing configuration that's already in use | [Existing project maintenance](#existing-project-maintenance) |
+| Creating a multi-chat workspace | [New ChatGPT or Claude Project](#new-chatgpt-or-claude-project) |
+| Researching or comparing options | [Research and comparison](#research-and-comparison) |
+| Clarifying a feature | [Feature is still unclear](#feature-is-still-unclear) |
+| Working from an approved spec | [Feature already has an approved spec](#feature-already-has-an-approved-spec) |
+| Implementing one issue | [One approved issue](#one-approved-issue) |
+| Coordinating related issues | [Several related issues](#several-related-issues) |
+| Debugging a bug | [Bug](#bug) |
+| Improving tests | [Testing](#testing) |
+| Getting an independent review | [Independent review](#independent-review) |
+| Preparing a commit, PR, or merge | [Git and GitHub delivery](#git-and-github-delivery) |
+| Handing work to another chat or agent | [Continue work elsewhere](#continue-work-elsewhere) |
+| Creating reusable AI configuration | [Need new AI configuration](#need-new-ai-configuration) |
+| Improving an existing workflow | [Workflow improvement](#workflow-improvement) |
 
 ## Only an idea
 
@@ -67,6 +34,7 @@ Use when the product or technical direction is still unclear.
 Flow:
 
 grill-me
+→ optionally prototype for an unresolved concrete design question
 → to-spec
 → ai-config-builder adopt when the project is defined
 → to-issues when implementation is ready
@@ -81,6 +49,7 @@ Use when the desired product is understood but implementation has not begun.
 Flow:
 
 grill-me when meaningful ambiguity remains
+→ optionally prototype for an unresolved concrete design question
 → to-spec
 → spec-reviewer when useful
 → ai-config-builder adopt
@@ -114,6 +83,8 @@ Classify relevant reusable configuration as:
 - KEEP EXISTING
 - REPLACE
 - SKIP
+
+Before changing the project, present the proposed files and classify each as ADD, KEEP EXISTING, REPLACE, or SKIP.
 
 Project-specific behavior and architecture take priority over reusable defaults.
 
@@ -168,9 +139,12 @@ Use `research-and-compare` when a decision depends on external evidence or a str
 
 ## Feature is still unclear
 
+Use `grill-me` to resolve product and technical questions before writing a spec. If a concrete uncertainty is easier to test than discuss, use `prototype` to compare isolated UI or logic alternatives. Skip it when discussion resolves the question. Prototypes are temporary and do not automatically become production code.
+
 Flow:
 
 grill-me
+→ optionally prototype for an unresolved concrete design question
 → to-spec
 → spec-reviewer when useful
 → to-issues
@@ -197,14 +171,14 @@ implement-issue
 
 ## Several related issues
 
-Flow:
+Use `issue-flow` when GitHub Issues already exist and need dependency-aware sequencing.
 
-issue-batch-orchestrator
-→ batch-orchestrator
+- `issue-flow plan` or “Arma un flow” reviews relevant open issues and proposes execution batches.
+- `issue-flow orchestrate Batch 2` generates a current, copy-paste-ready prompt for a selected batch.
+- Use `to-issues` first when an approved spec still needs to be split into issues.
+- Give the generated prompt to a coding agent, or use `batch-orchestrator` when coordinated execution is useful and supported.
 
-The planning skill determines dependencies, waves, and gates.
-
-The agent executes the approved plan and coordinates implementation and independent review.
+Planning and prompt generation do not change issue state or start implementation. This workflow is optional; skip steps that do not add value.
 
 
 ## Bug

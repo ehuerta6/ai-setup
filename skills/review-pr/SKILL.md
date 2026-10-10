@@ -1,11 +1,6 @@
 ---
 name: review-pr
 description: Review a pull request or completed diff separately against its requirements and against the repository's engineering standards.
-metadata:
-  adapted_from:
-    - cappy-hub review-pr
-    - cappycode review-pull-request
-    - mattpocock/skills code-review
 ---
 
 # Review PR

@@ -3,134 +3,104 @@ version: 0.1.0
 skills:
   grill-me:
     status: testing
-    source: mattpocock/skills
+
+  prototype:
+    status: testing
 
   to-spec:
     status: testing
-    source: mattpocock/skills
 
   to-issues:
     status: testing
-    source: mattpocock/skills
 
   implement-issue:
     status: testing
-    source: cappy-hub + cappycode
 
   verify-change:
     status: testing
-    source: cappy-hub
 
   review-pr:
     status: testing
-    source: cappy-hub + cappycode + mattpocock/skills
 
   debug-with-evidence:
     status: testing
-    source: cappy-hub + mattpocock/skills
 
   github-flow:
     status: testing
-    source: cappy-hub + cappycode
 
   handoff:
     status: testing
-    source: mattpocock/skills
 
   retro:
     status: testing
-    source: mattpocock/skills
 
   writing-for-agents:
     status: testing
-    source: mattpocock/skills
 
   humanizer:
     status: testing
-    source: blader/humanizer
 
   unslop:
     status: testing
-    source: cursor/plugins + theclaymethod/unslop
 
   impeccable:
     status: testing
-    source: pbakaus/impeccable
 
   firebase:
     status: testing
-    source: firebase official docs
 
   resume-review:
     status: testing
-    source: resume-reviews project instructions
 
-  issue-batch-orchestrator:
+  issue-flow:
     status: testing
-    source: user issue orchestration workflow
 
   ai-config-builder:
     status: testing
-    source: user-approved ai-setup workflow
 
   project-audit:
     status: testing
-    source: user-approved ai-setup workflow
 
   research-and-compare:
     status: testing
-    source: user-approved ai-setup workflow
 
 agents:
   pr-reviewer:
     status: testing
-    source: cappy-hub
 
   mentor:
     status: testing
-    source: cappy-hub project workflow
 
   supabase-database-reviewer:
     status: testing
-    source: cappy-hub
 
   batch-orchestrator:
     status: testing
-    source: user issue orchestration workflow
 
   spec-reviewer:
     status: testing
-    source: user-approved ai-setup workflow
 
   test-engineer:
     status: testing
-    source: testing research + user-approved workflow
 
 project_instructions:
   project-base:
     status: testing
-    source: user-approved universal project preset
 
   resume-reviews:
     status: testing
-    source: user Resume Reviews project
 
   learning-coach:
     status: testing
-    source: user learning workflow
 
   interview-prep:
     status: testing
-    source: user-approved project preset
 
   software-engineering-project:
     status: testing
-    source: user-approved project preset
 
   course-companion:
     status: testing
-    source: user-approved project preset
 
   research-workspace:
     status: testing
-    source: user-approved research workspace preset

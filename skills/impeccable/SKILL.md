@@ -1,12 +1,11 @@
 ---
 name: impeccable
 description: Design, critique, audit, and refine production frontend UI and UX with strong hierarchy, accessibility, responsive behavior, clear states, and deliberate visual decisions.
-metadata:
-  adapted_from:
-    - pbakaus/impeccable
 ---
 
 # Impeccable
+
+> This adapted file has been modified. See `THIRD_PARTY_NOTICES.md` for the applicable license notice.
 
 Use this skill for frontend design and UX work.
 
@@ -199,6 +198,8 @@ Watch for:
 A simple interface can still be deliberate.
 
 ### 9. Verify in bounded passes
+
+For UI tasks with explicit viewport, theme, or state requirements, plan the relevant checks before reviewing. Confirm the needed states are reachable with existing data or fixtures; use focused tests or isolated fixtures for gaps when justified. Record each requirement as visually inspected, automated, unavailable, or skipped. Automated checks do not replace visual inspection. Keep this proportional to the task.
 
 When implementation tools allow rendered inspection:
 

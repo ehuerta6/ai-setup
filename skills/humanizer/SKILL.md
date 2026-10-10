@@ -1,9 +1,6 @@
 ---
 name: humanizer
 description: Rewrite prose so it sounds natural, specific, and appropriate for its actual writer and audience while preserving facts, meaning, and intent.
-metadata:
-  adapted_from:
-    - blader/humanizer
 ---
 
 # Humanizer

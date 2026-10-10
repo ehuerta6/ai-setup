@@ -1,36 +1,34 @@
 # AI Setup
 
-Canonical reusable configuration for AI-assisted software engineering, with selected workflows for research, writing, learning, and long-running AI workspaces.
+Reusable configuration for AI-assisted software engineering, with selected workflows for research, writing, learning, and multi-chat workspaces.
 
-This repository contains reusable skills, agents, engineering rules, templates, and Project Instructions that can be selectively adopted by individual projects.
+Browse this README to find configuration. Use [WORKFLOWS.md](WORKFLOWS.md) to choose a process for a specific task.
 
-Project-specific requirements, architecture, product behavior, and technical decisions stay inside each project repository.
-
-For scenario-based usage workflows, see `WORKFLOWS.md`.
+Projects can adopt only what they need. Keep product behavior, architecture, and other project-specific decisions in the project repository.
 
 ## Quick start
 
-**Adopt into an existing repository:** inspect its `AGENTS.md`, conventions, and sources of truth; use the Project adoption workflow in `WORKFLOWS.md`; copy only the selected canonical files. For example, add `skills/firebase/SKILL.md` only when the project uses Firebase, and keep product-specific rules in that repository.
+- **Choose a workflow:** start with the scenario router in [WORKFLOWS.md](WORKFLOWS.md), then load the relevant skills.
+- **Adopt configuration into a project:** inspect its AI instructions, architecture, stack, Git workflow, and conventions. Then follow the Project adoption route in [WORKFLOWS.md](WORKFLOWS.md) and copy only the selected canonical files. For example, add `skills/firebase/SKILL.md` only to a project that uses Firebase, and keep product-specific instructions there.
+- **Set up a multi-chat workspace:** choose a Project Instructions preset below and tailor it with `skills/ai-config-builder/SKILL.md`.
 
-**Create a ChatGPT or Claude Project:** choose the closest preset below, then use `skills/ai-config-builder/SKILL.md` to tailor it. For example, start a multi-chat research workspace from `project-instructions/research-workspace.md` and add the actual research question and source index.
+The catalog below lists each artifact's canonical path and purpose.
 
-**Keep adopted configuration synchronized:** treat files here as canonical. Compare adopted copies with these paths during project audits and update only when changes fit the target project's needs. For example, diff the project's `AGENTS.md` against this repository before carrying over a reusable update; preserve intentional project-specific instructions.
+## Choosing configuration
 
-**Find a workflow:** use `WORKFLOWS.md`'s router. For example, use `implement-issue` for one approved issue, `ai-config-builder` to add configuration, or `research-and-compare` to evaluate options.
+Use the smallest artifact that fits the job:
 
-## How to use this repository
+| Artifact | Use it for |
+| --- | --- |
+| Skill | A repeatable task workflow, such as [research-and-compare](skills/research-and-compare/SKILL.md). |
+| Agent | A focused role that benefits from its own instructions or review context. |
+| Rule | A stable constraint that should guide many kinds of work, such as [security](rules/security.md). |
+| Template | A starting structure for a recurring document or decision. |
+| Project Instruction | Shared context for a long-running, multi-chat workspace, such as [research-workspace](project-instructions/research-workspace.md). |
 
-When applying this setup to another project:
+You do not need to adopt the whole catalog. In an existing repository, inspect its own instructions first, then copy only the relevant canonical files and keep product and architecture decisions in that repository. For example, a Firebase project might adopt `skills/firebase/SKILL.md` and `rules/security.md`, while leaving unrelated skills behind.
 
-1. Inspect that project's existing AI instructions, architecture, stack, Git workflow, and conventions.
-2. Read this README as the catalog of available reusable configuration.
-3. Select only the skills, agents, rules, templates, and Project Instructions that actually apply.
-4. Prefer existing project-specific instructions when they contain intentional product or architecture behavior.
-5. Copy the exact canonical files from this repository instead of recreating them from the descriptions below.
-6. Do not copy everything by default.
-7. Keep project-specific context inside the project.
-
-Before modifying the target project, present the proposed files to add, keep, replace, or skip.
+The catalog also supports nontechnical work. Use [research-and-compare](skills/research-and-compare/SKILL.md) for a focused comparison, [learning-coach](project-instructions/learning-coach.md) for a multi-chat learning workspace, or [project-base](project-instructions/project-base.md) for personal planning that needs continuity across chats. Skills guide a task; Project Instructions hold durable workspace context. The project workspace, not this reusable catalog, should contain personal details and decisions.
 
 # Skills
 
@@ -62,7 +60,13 @@ Path: `skills/grill-me/SKILL.md`
 
 Use when a feature, product decision, or implementation plan still contains ambiguity.
 
-Stress-tests decisions before implementation so agents do not have to guess.
+Stress-tests decisions before implementation so agents do not have to guess. Sharpens domain terminology, surfaces behavior conflicts, and identifies useful edge cases.
+
+### `prototype`
+
+Path: `skills/prototype/SKILL.md`
+
+Optional disposable UI or logic experiments for answering concrete design questions before implementation. Use only when trying alternatives will resolve uncertainty better than discussion.
 
 ### `to-spec`
 
@@ -116,13 +120,13 @@ Execute the repository's Git and GitHub workflow for branches, commits, issues, 
 
 Project-specific Git rules override its defaults.
 
-### `issue-batch-orchestrator`
+### `issue-flow`
 
-Path: `skills/issue-batch-orchestrator/SKILL.md`
+Path: `skills/issue-flow/SKILL.md`
 
-Analyze multiple GitHub Issues and build safe parallel or sequential execution waves.
+Plan existing GitHub Issues into dependency-aware batches, generate a prompt for a selected batch, and update the plan as repository state changes.
 
-Optimizes for maximum safe parallelism and explicit merge gates.
+Unlike `to-issues`, it does not create issues. Unlike the `batch-orchestrator` agent, it prepares the plan and prompt rather than executing the batch.
 
 ## Stack-specific
 
@@ -386,7 +390,7 @@ For long-running, multi-chat research projects with shared sources, findings, de
 
 # Registry
 
-`registry.yaml` tracks adoption status and provenance.
+`registry.yaml` tracks artifact identity and adoption status.
 
 Possible statuses:
 
@@ -398,10 +402,6 @@ Possible statuses:
 
 A workflow being present in this repository does not automatically make it part of the default setup.
 
-## Licensing and attribution
-
-`SOURCE.md` files record known sources and adaptation notes; they do not establish license compatibility. Upstream license terms have not been comprehensively verified, and this repository has no selected repository-wide license. Resolve licensing before redistributing source-derived material; no license is inferred here.
-
 # Repository structure
 
 - `skills/` — reusable workflows
@@ -409,7 +409,7 @@ A workflow being present in this repository does not automatically make it part 
 - `rules/` — stable engineering constraints
 - `templates/` — reusable artifact structures
 - `project-instructions/` — reusable multi-chat project behavior
-- `registry.yaml` — adoption status and provenance
+- `registry.yaml` — artifact identity and adoption status
 - `AGENTS.md` — instructions for agents working inside this repository
 - `WORKFLOWS.md` — scenario-based guide for choosing workflows
 
