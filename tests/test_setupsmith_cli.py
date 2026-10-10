@@ -833,6 +833,26 @@ class SkillCheckTests(unittest.TestCase):
             code = SETUPSMITH.main(args)
         return code, output.getvalue(), errors.getvalue()
 
+    def run_install(self, response="INSTALL\n"):
+        output, errors = io.StringIO(), io.StringIO()
+        args = ["install", "--source", "https://example.invalid/catalog.git",
+                "--ref", "refs/heads/main", "--skill", "guide",
+                "--assistant", "codex", "--assistant", "claude-code",
+                "--project", str(self.project)]
+        class InteractiveInput(io.StringIO):
+            def isatty(self):
+                return True
+        resolve = SETUPSMITH.resolve_source
+        def local_resolve(source, configured_ref, checkout):
+            if source == "https://example.invalid/catalog.git":
+                source = str(self.source)
+            return resolve(source, configured_ref, checkout)
+        with patch.object(SETUPSMITH, "resolve_source", side_effect=local_resolve), \
+                patch.object(sys, "stdin", InteractiveInput(response)), \
+                redirect_stdout(output), redirect_stderr(errors):
+            code = SETUPSMITH.main(args)
+        return code, output.getvalue(), errors.getvalue()
+
     def run_update(self, *, selection=("--all-safe",), response="", preview=False, interactive=True):
         output, errors = io.StringIO(), io.StringIO()
         args = ["update", "--project", str(self.project), *selection]
@@ -847,6 +867,25 @@ class SkillCheckTests(unittest.TestCase):
                 source = str(self.source)
             return resolve(source, configured_ref, checkout)
         with patch.object(SETUPSMITH, "resolve_source", side_effect=local_resolve), \
+                patch.object(sys, "stdin", InteractiveInput(response)), \
+                redirect_stdout(output), redirect_stderr(errors):
+            code = SETUPSMITH.main(args)
+        return code, output.getvalue(), errors.getvalue()
+
+    def run_restore(self, response="", preview=False, interactive=True):
+        output, errors = io.StringIO(), io.StringIO()
+        args = ["restore", "--project", str(self.project)]
+        if preview:
+            args.append("--preview-only")
+        original_git = SETUPSMITH.git
+        def local_git(*git_args, cwd=None):
+            rewritten = tuple(str(self.source) if str(arg) == "https://example.invalid/catalog.git" else arg
+                              for arg in git_args)
+            return original_git(*rewritten, cwd=cwd)
+        class InteractiveInput(io.StringIO):
+            def isatty(self):
+                return interactive
+        with patch.object(SETUPSMITH, "git", side_effect=local_git), \
                 patch.object(sys, "stdin", InteractiveInput(response)), \
                 redirect_stdout(output), redirect_stderr(errors):
             code = SETUPSMITH.main(args)
@@ -1074,6 +1113,260 @@ class SkillCheckTests(unittest.TestCase):
         self.assertEqual(code, 0, errors)
         self.assertIn("future-agent: UNSUPPORTED_TARGET", output)
         self.assertNotIn("LOCAL_DIVERGENCE", output)
+
+    def test_restore_preview_decline_approved_pinned_revision_and_repeat_noop(self):
+        import shutil
+        self.git(self.project, "add", ".")
+        self.git(self.project, "commit", "-qm", "commit managed manifest and skills")
+        clone = self.base / "restore-clone"
+        subprocess.run(["git", "clone", "-q", str(self.project), str(clone)], check=True)
+        self.project = clone
+        self.manifest_path = self.project / ".setupsmith/manifest.json"
+        shutil.rmtree(self.project / ".agents/skills/guide")
+        shutil.rmtree(self.project / ".claude/skills/guide")
+        self.push_revision_b(skill_text="Guide B line.\n", binary=b"\x00B")
+        before_manifest = self.manifest_path.read_bytes()
+        code, preview, errors = self.run_restore(preview=True)
+        self.assertEqual(code, 0, errors)
+        self.assertIn(self.revision_a, preview)
+        self.assertIn(".agents/skills/guide", preview)
+        self.assertIn(".claude/skills/guide", preview)
+        self.assertIn("assets/data.bin", preview)
+        self.assertFalse((self.project / ".agents/skills/guide").exists())
+        code, declined, errors = self.run_restore(response="no\n")
+        self.assertEqual(code, 0, errors)
+        self.assertIn("Declined", declined)
+        self.assertFalse((self.project / ".claude/skills/guide").exists())
+        code, restored, errors = self.run_restore(response="RESTORE\n")
+        self.assertEqual(code, 0, errors)
+        self.assertIn("Restored and verified", restored)
+        for destination in (self.project / ".agents/skills/guide", self.project / ".claude/skills/guide"):
+            self.assertEqual(SETUPSMITH.tree_identity(destination)[0], self.digest_a)
+        self.assertEqual(self.manifest_path.read_bytes(), before_manifest)
+        code, repeated, errors = self.run_restore(response="RESTORE\n")
+        self.assertEqual(code, 0, errors)
+        self.assertIn("Already restored and verified", repeated)
+        self.assertIn("No verified missing destinations", repeated)
+
+    def test_restore_preserves_unknown_custom_files_and_refuses_occupied_paths(self):
+        import shutil
+        custom = self.project / ".agents/skills/local-guide"
+        shutil.copytree(self.source / "skills/guide", custom)
+        (custom / "SKILL.md").write_text("custom user instructions\n", encoding="utf-8")
+        target = {"assistant": "codex", "path": ".agents/skills/local-guide",
+                  "state": "installed", "adoption": "adopted"}
+        self.write_manifest(baseline_state="unknown", targets=[target])
+        before = self.tree_snapshot()
+        code, output, errors = self.run_restore(preview=True)
+        self.assertEqual(code, 0, errors)
+        self.assertIn("UNKNOWN_BASELINE", output)
+        self.assertIn("missing custom files must be supplied separately", output)
+        self.assertEqual(self.tree_snapshot(), before)
+
+        self.write_manifest()
+        shutil.rmtree(self.project / ".agents/skills/guide")
+        shutil.copytree(self.source / "skills/guide", self.project / ".agents/skills/guide")
+        (self.project / ".agents/skills/guide/SKILL.md").write_text("unmanaged occupied content")
+        before = self.tree_snapshot()
+        code, output, errors = self.run_restore(preview=True)
+        self.assertEqual(code, 2, errors)
+        self.assertIn("DESTINATION_CONFLICT", output)
+        self.assertIn("no project files changed", output)
+        self.assertEqual(self.tree_snapshot(), before)
+
+    def test_restore_refuses_unavailable_pinned_revision_and_noninteractive_write(self):
+        import shutil
+        shutil.rmtree(self.project / ".agents/skills/guide")
+        shutil.rmtree(self.project / ".claude/skills/guide")
+        self.write_manifest(revision="0" * 40)
+        before = self.tree_snapshot()
+        code, output, errors = self.run_restore(preview=True)
+        self.assertEqual(code, 2, errors)
+        self.assertIn("SOURCE_UNAVAILABLE_OR_CONFLICT", output)
+        self.assertEqual(self.tree_snapshot(), before)
+        self.write_manifest()
+        before_normal = self.tree_snapshot()
+        code, _, errors = self.run_restore(interactive=False)
+        self.assertEqual(code, 2)
+        self.assertIn("requires interactive terminal approval", errors)
+        self.assertEqual(self.tree_snapshot(), before_normal)
+
+    def test_restore_rechecks_existing_targets_after_approval(self):
+        import shutil
+        shutil.rmtree(self.project / ".claude/skills/guide")
+
+        def edit_existing_and_approve(prompt):
+            (self.project / ".agents/skills/guide/SKILL.md").write_text("changed during approval\n")
+            return "RESTORE"
+
+        with patch("builtins.input", side_effect=edit_existing_and_approve):
+            code, output, errors = self.run_restore(response="RESTORE\n")
+        self.assertEqual(code, 2)
+        self.assertIn("already-restored destination changed", errors)
+        self.assertFalse((self.project / ".claude/skills/guide").exists())
+
+    def test_restore_verified_adopted_local_path(self):
+        import shutil
+        custom = self.project / ".agents/skills/local-guide"
+        shutil.copytree(self.project / ".agents/skills/guide", custom)
+        shutil.rmtree(self.project / ".agents/skills/guide")
+        targets = [
+            {"assistant": "codex", "path": ".agents/skills/local-guide", "state": "installed", "adoption": "adopted"},
+            {"assistant": "claude-code", "path": ".claude/skills/guide", "state": "installed"},
+        ]
+        self.write_manifest(targets=targets)
+        shutil.rmtree(custom)
+        shutil.rmtree(self.project / ".claude/skills/guide")
+        code, preview, errors = self.run_restore(preview=True)
+        self.assertEqual(code, 0, errors)
+        self.assertIn(".agents/skills/local-guide", preview)
+        code, _, errors = self.run_restore(response="RESTORE\n")
+        self.assertEqual(code, 0, errors)
+        self.assertEqual(SETUPSMITH.tree_identity(custom)[0], self.digest_a)
+        self.assertEqual(SETUPSMITH.tree_identity(self.project / ".claude/skills/guide")[0], self.digest_a)
+
+    def test_restore_refuses_manifest_digest_mismatch_and_destination_symlink(self):
+        import shutil
+        self.write_manifest(digest="a" * 64)
+        before = self.tree_snapshot()
+        code, output, errors = self.run_restore(preview=True)
+        self.assertEqual(code, 2, errors)
+        self.assertIn("SOURCE_UNAVAILABLE_OR_CONFLICT", output)
+        self.assertEqual(self.tree_snapshot(), before)
+
+        self.write_manifest()
+        shutil.rmtree(self.project / ".agents/skills/guide")
+        outside = self.base / "outside-target"
+        outside.mkdir()
+        (outside / "keep.txt").write_text("untouched\n")
+        (self.project / ".agents/skills/guide").symlink_to(outside, target_is_directory=True)
+        before_outside = (outside / "keep.txt").read_bytes()
+        code, output, errors = self.run_restore(preview=True)
+        self.assertEqual(code, 2, errors)
+        self.assertIn("DESTINATION_CONFLICT", output)
+        self.assertEqual((outside / "keep.txt").read_bytes(), before_outside)
+
+    def test_restore_reports_injected_placement_failure_without_partial_tree(self):
+        import shutil
+        shutil.rmtree(self.project / ".agents/skills/guide")
+        shutil.rmtree(self.project / ".claude/skills/guide")
+        original_replace = os.replace
+
+        def fail_destination_placement(source, destination):
+            if Path(destination).name == "guide" and ".agents/skills" in str(destination):
+                raise OSError("injected placement failure")
+            return original_replace(source, destination)
+
+        before_manifest = self.manifest_path.read_bytes()
+        with patch.object(SETUPSMITH.os, "replace", side_effect=fail_destination_placement):
+            code, _, errors = self.run_restore(response="RESTORE\n")
+        self.assertEqual(code, 2)
+        self.assertIn("injected placement failure", errors)
+        self.assertIn("completed writes were removed", errors)
+        self.assertFalse((self.project / ".agents/skills/guide").exists())
+        self.assertFalse((self.project / ".claude/skills/guide").exists())
+        self.assertEqual(self.manifest_path.read_bytes(), before_manifest)
+
+    def test_restore_labels_unsupported_legacy_target_without_reading_it(self):
+        target = {"assistant": "codex-legacy", "path": ".codex/skills/guide", "state": "installed"}
+        self.write_manifest(targets=[target])
+        before = self.tree_snapshot()
+        code, output, errors = self.run_restore(preview=True)
+        self.assertEqual(code, 0, errors)
+        self.assertIn("UNSUPPORTED_TARGET codex-legacy", output)
+        self.assertIn("No verified missing destinations", output)
+        self.assertEqual(self.tree_snapshot(), before)
+
+    def test_install_update_restore_missing_destination_uses_updated_manifest_pin(self):
+        import shutil
+        shutil.rmtree(self.project / ".agents/skills/guide")
+        shutil.rmtree(self.project / ".claude/skills/guide")
+        self.manifest_path.unlink()
+        code, output, errors = self.run_install()
+        self.assertEqual(code, 0, output + errors)
+        self.assertEqual(json.loads(self.manifest_path.read_text())["artifacts"][0]["revision"], self.revision_a)
+
+        revision_b = self.push_revision_b(skill_text="Guide B line.\n", binary=b"\x00B")
+        code, output, errors = self.run_update(response="UPDATE\n")
+        self.assertEqual(code, 0, errors)
+        self.assertIn("Updated successfully", output)
+        self.assertEqual(json.loads(self.manifest_path.read_text())["artifacts"][0]["revision"], revision_b)
+
+        revision_c = self.push_revision_b(skill_text="Guide C line.\n", binary=b"\x00C")
+        manifest_after_update = self.manifest_path.read_bytes()
+        current_target = self.project / ".claude/skills/guide/SKILL.md"
+        current_target_stat = current_target.stat()
+        shutil.rmtree(self.project / ".agents/skills/guide")
+        code, output, errors = self.run_restore(response="RESTORE\n")
+        self.assertEqual(code, 0, errors)
+        self.assertIn(revision_b, output)
+        self.assertNotIn(revision_c, output)
+        self.assertEqual(SETUPSMITH.tree_identity(self.project / ".agents/skills/guide")[0], self.digest(revision_b))
+        self.assertEqual(current_target.stat().st_mtime_ns, current_target_stat.st_mtime_ns)
+        self.assertEqual(self.manifest_path.read_bytes(), manifest_after_update)
+
+    def test_restore_then_update_moves_from_pinned_revision_to_configured_ref(self):
+        import shutil
+        shutil.rmtree(self.project / ".agents/skills/guide")
+        shutil.rmtree(self.project / ".claude/skills/guide")
+        revision_b = self.push_revision_b(skill_text="Guide B line.\n", binary=b"\x00B")
+        code, output, errors = self.run_restore(response="RESTORE\n")
+        self.assertEqual(code, 0, errors)
+        self.assertIn(self.revision_a, output)
+        self.assertEqual(SETUPSMITH.tree_identity(self.project / ".agents/skills/guide")[0], self.digest_a)
+        self.assertEqual(json.loads(self.manifest_path.read_text())["artifacts"][0]["revision"], self.revision_a)
+
+        code, output, errors = self.run_update(response="UPDATE\n")
+        self.assertEqual(code, 0, errors)
+        self.assertIn(revision_b, output)
+        self.assertEqual(SETUPSMITH.tree_identity(self.project / ".agents/skills/guide")[0], self.digest(revision_b))
+        self.assertEqual(SETUPSMITH.tree_identity(self.project / ".claude/skills/guide")[0], self.digest(revision_b))
+
+    def test_restore_does_not_rewrite_current_target_when_another_is_missing(self):
+        import shutil
+        shutil.rmtree(self.project / ".claude/skills/guide")
+        current_file = self.project / ".agents/skills/guide/SKILL.md"
+        before_stat = current_file.stat()
+        before_bytes = current_file.read_bytes()
+        before_manifest = self.manifest_path.read_bytes()
+        code, output, errors = self.run_restore(response="RESTORE\n")
+        self.assertEqual(code, 0, errors)
+        self.assertIn("Already restored and verified: .agents/skills/guide", output)
+        after_stat = current_file.stat()
+        self.assertEqual(current_file.read_bytes(), before_bytes)
+        self.assertEqual((after_stat.st_ino, after_stat.st_mtime_ns), (before_stat.st_ino, before_stat.st_mtime_ns))
+        self.assertEqual(self.manifest_path.read_bytes(), before_manifest)
+
+    def test_restore_preserves_unrelated_managed_entry(self):
+        import shutil
+        other_source = self.source / "skills/other"
+        other_source.mkdir(parents=True)
+        (other_source / "SKILL.md").write_text(
+            "---\nname: other\ndescription: Unrelated fixture skill.\n---\nOther.\n", encoding="utf-8")
+        self.git(self.source, "add", ".")
+        self.git(self.source, "commit", "-qm", "add unrelated skill")
+        other_revision = self.git(self.source, "rev-parse", "HEAD")
+        self.git(self.source, "push", "origin", "main")
+        other_digest, other_hashes, _ = SETUPSMITH.tree_identity(other_source)
+        other_target = self.project / ".agents/skills/other"
+        shutil.copytree(other_source, other_target)
+        manifest = json.loads(self.manifest_path.read_text(encoding="utf-8"))
+        other_entry = {"id": "skills/other", "source": "https://example.invalid/catalog.git",
+                       "configured_ref": "refs/heads/main", "revision": other_revision,
+                       "content_digest": other_digest, "files": other_hashes,
+                       "targets": [{"assistant": "codex", "path": ".agents/skills/other",
+                                    "state": "installed"}]}
+        manifest["artifacts"].append(other_entry)
+        self.manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+        shutil.rmtree(self.project / ".claude/skills/guide")
+        before_other = SETUPSMITH.tree_identity(other_target)
+        before_entry = json.loads(self.manifest_path.read_text(encoding="utf-8"))["artifacts"][1]
+        code, output, errors = self.run_restore(response="RESTORE\n")
+        self.assertEqual(code, 0, errors)
+        self.assertIn("Restored and verified: .claude/skills/guide", output)
+        self.assertEqual(SETUPSMITH.tree_identity(other_target), before_other)
+        after_manifest = json.loads(self.manifest_path.read_text(encoding="utf-8"))
+        self.assertEqual(after_manifest["artifacts"][1], before_entry)
 
     def test_configured_tag_ref_is_not_silently_switched_to_branch_head(self):
         self.git(self.source, "tag", "release-a", self.revision_a)
