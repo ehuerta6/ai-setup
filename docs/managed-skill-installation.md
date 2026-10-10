@@ -1,6 +1,6 @@
 # Managed skill installation
 
-SetupSmith's standalone CLI supports deterministic, project-local installation of selected skills and explicit adoption of existing skills. Catalog discovery, installation, and adoption do not require an LLM or the `setup-ai` skill. Change checks and diffs, Sync, updates, and removal are not implemented.
+SetupSmith's standalone CLI supports deterministic, project-local installation of selected skills, explicit adoption of existing skills, and read-only checks and diffs. These commands do not require an LLM or the `setup-ai` skill. Sync, update application, and removal are not implemented.
 
 ## Commands
 
@@ -93,6 +93,45 @@ An exact full-tree match to a retrieved canonical skill records `baseline_state:
 
 Schema version remains `1`. Existing Issue #11 entries with no `baseline_state` or target `adoption` fields continue to mean verified installations; they are not migrated or reclassified. New adoption targets record `adoption: "adopted"`, while each new artifact entry records its explicit `baseline_state`. An adopted target's `path` is its actual safe relative destination and may have a local directory name different from the canonical artifact ID. Its assistant-specific root must still be one of the supported layouts. Targets marked `installed` keep the canonical destination convention. An artifact may contain both installed and adopted targets when their content has the same verified baseline. `content_digest` and `files` describe the verified canonical baseline for verified entries and observed local content for unknown entries. These fields remain separate from `registry.yaml` catalog status.
 
+## Read-only check and diff
+
+Check every managed target against the immutable recorded baseline and its configured source ref:
+
+```sh
+python3 scripts/setupsmith.py check --project /path/to/project
+```
+
+Show text patches and binary path digests, optionally for one skill:
+
+```sh
+python3 scripts/setupsmith.py diff --project /path/to/project
+python3 scripts/setupsmith.py diff --project /path/to/project --skill research-and-compare
+```
+
+The manifest determines which artifact and target SetupSmith manages. The filesystem determines the installed content. The CLI refreshes the exact configured ref stored for each artifact and displays its current resolved commit separately from the recorded baseline commit. It does not silently choose a different branch, tag, or latest release. Each target is reported independently, so Codex and Claude Code can have different states.
+
+| State | Meaning |
+| --- | --- |
+| `CURRENT` | Verified baseline, current upstream, and this target's files match. |
+| `UPSTREAM_UPDATE` | The configured upstream tree differs from the verified baseline. |
+| `LOCAL_DIVERGENCE` | This target's files differ from the recorded baseline or, for unknown baselines, from the observed hashes at adoption. |
+| `MISSING_INSTALLATION` | The recorded destination is absent. |
+| `UPSTREAM_REMOVED` | The configured current source no longer contains the skill. Local files are preserved. |
+| `UNKNOWN_BASELINE` | No historical canonical revision is claimed; only observed local hashes can be checked. |
+| `DESTINATION_CONFLICT` | The destination is unsafe, unreadable, symlinked, or not a skill directory. |
+| `UNSUPPORTED_TARGET` | The recorded assistant target is unknown or is a legacy/non-native layout. |
+| `SOURCE_UNAVAILABLE` | The configured ref or recorded revision could not be fetched or safely compared. |
+
+States can appear together. For example, a target can have both `UPSTREAM_UPDATE` and `LOCAL_DIVERGENCE`. Text diffs label `Baseline → Upstream` and `Baseline → Local`; binary resources show changed paths and SHA-256 digests. Every resource in the skill tree is compared, not only `SKILL.md`.
+
+The checker does not maintain an offline cache. If the configured source is unavailable, it reports `SOURCE_UNAVAILABLE`, identifies any local changes detectable from manifest hashes, and says that no cache was used. It does not claim the source is current or invent a revision. If no ref was recorded for an unknown-baseline entry, it will not select the source's default branch on the user's behalf.
+
+Checks and diffs do not create a manifest, change installed files, write project instructions, apply updates, or remove upstream-deleted skills. The checker exits with an error for malformed manifest data or when the manifest's claimed verified baseline does not match the recorded immutable source revision.
+
+### Schema-1 adoption fields
+
+The checker accepts the shared schema-1 contract for explicit adoption. Existing Issue #11 entries without `baseline_state` and target `adoption` fields remain verified installations. Adopted targets carry `adoption: "adopted"`; their target path may have a safe local basename that differs from the canonical artifact ID while remaining in the recorded assistant-specific layout. Installed targets retain the canonical basename. Verified entries identify the canonical commit and full-tree hashes. Unknown-baseline entries have `baseline_state: "unknown"`, `revision: null`, and observed file hashes. A configured ref may be null if it was not known. Observed hashes help detect changes after adoption but do not establish canonical history. This additive contract does not reinterpret older manifests.
+
 ## Safety and current limits
 
 - Only skills are managed; agents, rules, templates, and Project Instructions remain reference-only.
@@ -100,6 +139,6 @@ Schema version remains `1`. Existing Issue #11 entries with no `baseline_state` 
 - The exact source revision, manifest, and destinations are rechecked after confirmation and before writes. A stale plan is refused.
 - New directories are staged and content-verified before placement. A failed installation attempts to remove completed writes and restore the prior manifest, and reports any rollback failure.
 - Repeating an unchanged installation is a no-op, including no manifest rewrite.
-- Changes to a managed skill after installation are reported as conflicts; the CLI does not repair or update them.
+- Installation refuses a managed skill whose files have changed; `check` reports `LOCAL_DIVERGENCE` and `diff` shows the changes without repairing them.
 - Local source paths are accepted only when their Git repository has a credential-free portable `origin` URL; that URL is what the manifest records.
-- Global installation, source refresh checks, update/diff, sync, removal, and multi-target update recovery are out of scope.
+- Global installation, background source refresh, update application, sync, removal, and multi-target update recovery are out of scope.

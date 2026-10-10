@@ -1,4 +1,5 @@
 import json
+import hashlib
 import importlib.util
 import io
 import os
@@ -195,7 +196,10 @@ class SkillInstallationTests(unittest.TestCase):
 
     @staticmethod
     def git(cwd, *args):
-        return subprocess.check_output(["git", *args], cwd=cwd, text=True).strip()
+        result = subprocess.run(["git", *args], cwd=cwd, text=True, capture_output=True)
+        if result.returncode:
+            raise AssertionError(result.stderr + result.stdout)
+        return result.stdout.strip()
 
     def run_install(self, response="", preview=False, skills=("guide",), assistants=("codex", "claude-code")):
         output = io.StringIO()
@@ -725,6 +729,395 @@ class SkillInstallationTests(unittest.TestCase):
         manifest_after = json.loads(manifest_path.read_text())
         self.assertEqual(manifest_after, manifest_before)
 
+
+
+class SkillCheckTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.base = Path(self.temporary.name)
+        self.remote = self.base / "catalog.git"
+        self.git(self.base, "init", "--bare", "-q", str(self.remote))
+        self.source = self.base / "catalog"
+        self.source.mkdir()
+        self.git(self.source, "init", "-q", "-b", "main")
+        self.git(self.source, "config", "user.name", "Fixture")
+        self.git(self.source, "config", "user.email", "fixture@example.invalid")
+        self.write_source_tree("Guide A line.\n", "helper A line.\n", b"\x00A")
+        self.git(self.source, "add", ".")
+        self.git(self.source, "commit", "-qm", "revision A")
+        self.revision_a = self.git(self.source, "rev-parse", "HEAD")
+        self.digest_a, self.hashes_a, _ = SETUPSMITH.tree_identity(self.source / "skills/guide")
+        self.git(self.source, "remote", "add", "origin", self.remote.as_uri())
+        self.git(self.source, "push", "-u", "origin", "main")
+        self.project = self.base / "project"
+        self.project.mkdir()
+        self.git(self.project, "init", "-q", "-b", "main")
+        self.git(self.project, "config", "user.name", "Fixture")
+        self.git(self.project, "config", "user.email", "fixture@example.invalid")
+        self.git(self.project, "commit", "--allow-empty", "-qm", "project")
+        self.copy_source_to_target(".agents/skills/guide")
+        self.copy_source_to_target(".claude/skills/guide")
+        self.manifest_path = self.project / ".setupsmith/manifest.json"
+        self.write_manifest()
+
+    def tearDown(self):
+        self.temporary.cleanup()
+
+    @staticmethod
+    def git(cwd, *args):
+        result = subprocess.run(["git", *args], cwd=cwd, text=True, capture_output=True)
+        if result.returncode:
+            raise AssertionError(result.stderr + result.stdout)
+        return result.stdout.strip()
+
+    def write_source_tree(self, skill_text, helper_text, binary):
+        skill = self.source / "skills/guide"
+        (skill / "references").mkdir(parents=True, exist_ok=True)
+        (skill / "assets").mkdir(exist_ok=True)
+        (skill / "SKILL.md").write_text(
+            "---\nname: guide\ndescription: Fixture comparison skill.\n---\n" + skill_text,
+            encoding="utf-8")
+        (skill / "references/helper.md").write_text(helper_text, encoding="utf-8")
+        (skill / "assets/data.bin").write_bytes(binary)
+
+    def copy_source_to_target(self, relative):
+        import shutil
+        target = self.project / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(self.source / "skills/guide", target)
+
+    def write_manifest(self, *, source=None, configured_ref="refs/heads/main", revision=None,
+                       baseline_state="verified", targets=None, files=None, digest=None):
+        entry = {"id": "skills/guide", "source": source or "https://example.invalid/catalog.git",
+                 "configured_ref": configured_ref, "revision": revision or self.revision_a,
+                 "content_digest": self.digest_a, "files": self.hashes_a,
+                 "targets": targets or [
+                     {"assistant": "codex", "path": ".agents/skills/guide", "state": "installed"},
+                     {"assistant": "claude-code", "path": ".claude/skills/guide", "state": "installed"}]}
+        if baseline_state != "verified":
+            entry["baseline_state"] = baseline_state
+            entry["revision"] = revision
+            for target in entry["targets"]:
+                target["adoption"] = "adopted"
+        if files is not None:
+            entry["files"] = files
+        if digest is not None:
+            entry["content_digest"] = digest
+        self.manifest_path.parent.mkdir(parents=True, exist_ok=True)
+        self.manifest_path.write_text(json.dumps({"schema_version": 1, "artifacts": [entry]}, indent=2),
+                                      encoding="utf-8")
+
+    def push_revision_b(self, *, skill_text="Guide A line.\n", helper_text="helper B line.\n",
+                        binary=b"\x00A", add_file=True):
+        self.write_source_tree(skill_text, helper_text, binary)
+        if add_file:
+            (self.source / "skills/guide/references/new.md").write_text("added upstream\n", encoding="utf-8")
+        self.git(self.source, "add", "-A")
+        self.git(self.source, "commit", "-qm", "revision B")
+        revision = self.git(self.source, "rev-parse", "HEAD")
+        self.git(self.source, "push", "origin", "main")
+        return revision
+
+    def run_command(self, command="check", *, skills=()):
+        output, errors = io.StringIO(), io.StringIO()
+        args = [command, "--project", str(self.project)]
+        for skill in skills:
+            args.extend(["--skill", skill])
+        resolve = SETUPSMITH.resolve_source
+        def local_resolve(source, configured_ref, checkout):
+            if source == "https://example.invalid/catalog.git":
+                source = str(self.source)
+            return resolve(source, configured_ref, checkout)
+        with patch.object(SETUPSMITH, "resolve_source", side_effect=local_resolve), \
+                redirect_stdout(output), redirect_stderr(errors):
+            code = SETUPSMITH.main(args)
+        return code, output.getvalue(), errors.getvalue()
+
+    def tree_snapshot(self):
+        entries = {}
+        for path in self.project.rglob("*"):
+            relative = path.relative_to(self.project).as_posix()
+            if path.is_symlink():
+                entries[relative] = ("symlink", os.readlink(path))
+            elif path.is_dir():
+                entries[relative] = ("dir",)
+            else:
+                entries[relative] = ("file", path.read_bytes())
+        return entries
+
+    def test_current_verified_installation(self):
+        code, output, errors = self.run_command()
+        self.assertEqual(code, 0, errors)
+        self.assertIn("codex: CURRENT", output)
+        self.assertIn("claude-code: CURRENT", output)
+        self.assertIn(self.revision_a, output)
+
+    def test_adopted_local_path_check_and_diff_are_read_only_and_honest(self):
+        self.git(self.source, "remote", "set-url", "origin", "https://example.invalid/catalog.git")
+        import shutil
+        self.manifest_path.unlink()
+        shutil.rmtree(self.project / ".agents/skills/guide")
+        shutil.rmtree(self.project / ".claude/skills/guide")
+        destination = self.project / ".agents/skills/local-name"
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(self.source / "skills/guide", destination)
+        skill_md = destination / "SKILL.md"
+        skill_md.write_text(skill_md.read_text(encoding="utf-8").replace("name: guide", "name: local-name")
+                            .replace("Guide A line.", "Customized at adoption.\n"), encoding="utf-8")
+        adopt_args = ["adopt", "--source", str(self.source), "--project", str(self.project),
+                      "--map", ".agents/skills/local-name=skills/guide"]
+        adopt_output, adopt_errors = io.StringIO(), io.StringIO()
+
+        class InteractiveInput(io.StringIO):
+            def isatty(self):
+                return True
+
+        with patch.object(sys, "stdin", InteractiveInput("")), \
+                patch("builtins.input", return_value="INSTALL"), \
+                redirect_stdout(adopt_output), redirect_stderr(adopt_errors):
+            code = SETUPSMITH.main(adopt_args)
+        self.assertEqual(code, 0, adopt_errors.getvalue() + adopt_output.getvalue())
+
+        manifest = json.loads(self.manifest_path.read_text(encoding="utf-8"))
+        entry = manifest["artifacts"][0]
+        self.assertEqual(entry["id"], "skills/guide")
+        self.assertEqual(entry["targets"][0]["path"], ".agents/skills/local-name")
+        self.assertEqual(entry["baseline_state"], "unknown")
+        self.assertIsNone(entry["revision"])
+        manifest_after_adopt = self.manifest_path.read_bytes()
+
+        # An install must read the schema and protect an unknown-baseline adoption.
+        install_output, install_errors = io.StringIO(), io.StringIO()
+        with patch.object(sys, "stdin", InteractiveInput("")), \
+                redirect_stdout(install_output), redirect_stderr(install_errors):
+            install_code = SETUPSMITH.main(["install", "--source", str(self.source), "--skill", "guide",
+                                            "--assistant", "codex", "--project", str(self.project)])
+        self.assertEqual(install_code, 2)
+        self.assertIn("provenance or verified content baseline",
+                      install_errors.getvalue() + install_output.getvalue())
+        self.assertEqual(self.manifest_path.read_bytes(), manifest_after_adopt)
+
+        local_file = destination / "references/helper.md"
+        local_file.write_text("Changed after adoption.\n", encoding="utf-8")
+        expected_before = entry["files"]["references/helper.md"]
+        expected_after = hashlib.sha256(b"Changed after adoption.\n").hexdigest()
+        before_checks = self.tree_snapshot()
+        code, check_output, errors = self.run_command("check")
+        self.assertEqual(code, 0, errors)
+        self.assertIn("skills/guide", check_output)
+        self.assertIn("UNKNOWN_BASELINE", check_output)
+        self.assertIn("LOCAL_DIVERGENCE", check_output)
+        self.assertIn("references/helper.md", check_output)
+        self.assertIn(".agents/skills/local-name", check_output)
+        self.assertIn(expected_before, check_output)
+        self.assertIn(expected_after, check_output)
+        self.assertNotIn("CURRENT", check_output)
+        self.assertEqual(self.tree_snapshot(), before_checks)
+
+        code, diff_output, errors = self.run_command("diff")
+        self.assertEqual(code, 0, errors)
+        self.assertIn("UNKNOWN_BASELINE", diff_output)
+        self.assertIn("LOCAL_DIVERGENCE", diff_output)
+        self.assertIn("references/helper.md", diff_output)
+        self.assertIn("observed hashes only", diff_output)
+        self.assertNotIn("Baseline ", diff_output)
+        self.assertIn(expected_before, diff_output)
+        self.assertIn(expected_after, diff_output)
+        self.assertEqual(self.tree_snapshot(), before_checks)
+
+    def test_adopted_path_validator_keeps_install_naming_and_ownership_strict(self):
+        custom_target = {"assistant": "codex", "path": ".agents/skills/local-name",
+                         "state": "installed", "adoption": "adopted"}
+        self.write_manifest(baseline_state="unknown", targets=[custom_target])
+        self.assertEqual(len(SETUPSMITH.load_check_manifest(self.manifest_path)["artifacts"]), 1)
+
+        installed_custom = dict(custom_target, adoption="installed")
+        self.write_manifest(targets=[installed_custom])
+        code, _, errors = self.run_command()
+        self.assertEqual(code, 2)
+        self.assertIn("conflicting target path", errors)
+
+        unsafe_custom = dict(custom_target, path=".agents/skills/../outside")
+        self.write_manifest(baseline_state="unknown", targets=[unsafe_custom])
+        code, _, errors = self.run_command()
+        self.assertEqual(code, 2)
+        self.assertIn("conflicting target path", errors)
+
+        duplicate_owner = dict(custom_target)
+        self.write_manifest(baseline_state="unknown", targets=[custom_target, duplicate_owner])
+        code, _, errors = self.run_command()
+        self.assertEqual(code, 2)
+        self.assertIn("conflicting target ownership", errors)
+
+    def test_upstream_support_file_change_and_text_diff(self):
+        revision_b = self.push_revision_b()
+        code, output, errors = self.run_command()
+        self.assertEqual(code, 0, errors)
+        self.assertIn("UPSTREAM_UPDATE", output)
+        code, diff, errors = self.run_command("diff")
+        self.assertEqual(code, 0, errors)
+        self.assertIn(f"Baseline {self.revision_a}/references/helper.md", diff)
+        self.assertIn(f"Upstream {revision_b}/references/helper.md", diff)
+        self.assertIn("-helper A line.", diff)
+        self.assertIn("+helper B line.", diff)
+        self.assertIn("added upstream", diff)
+
+    def test_upstream_support_file_removal_is_reported(self):
+        (self.source / "skills/guide/references/helper.md").unlink()
+        self.git(self.source, "add", "-A")
+        self.git(self.source, "commit", "-qm", "remove support file")
+        self.git(self.source, "push", "origin", "main")
+        code, output, errors = self.run_command()
+        self.assertEqual(code, 0, errors)
+        self.assertIn("upstream removed: references/helper.md", output)
+        code, diff, _ = self.run_command("diff")
+        self.assertIn("Baseline ", diff)
+        self.assertIn("/references/helper.md", diff)
+        self.assertIn("+++ /dev/null", diff)
+
+    def test_local_only_change_reports_local_divergence(self):
+        local = self.project / ".agents/skills/guide/references/helper.md"
+        local.write_text("locally changed\n", encoding="utf-8")
+        code, output, _ = self.run_command()
+        self.assertEqual(code, 0)
+        self.assertIn("codex: LOCAL_DIVERGENCE", output)
+        self.assertIn("claude-code: CURRENT", output)
+        code, diff, _ = self.run_command("diff")
+        self.assertEqual(code, 0)
+        self.assertIn("→ Local .agents/skills/guide", diff)
+        self.assertIn("-helper A line.", diff)
+        self.assertIn("+locally changed", diff)
+
+    def test_simultaneous_upstream_and_local_changes_are_separate(self):
+        self.push_revision_b(skill_text="Guide B line.\n")
+        (self.project / ".agents/skills/guide/references/helper.md").write_text("local helper\n", encoding="utf-8")
+        code, output, _ = self.run_command()
+        self.assertEqual(code, 0)
+        self.assertIn("codex:", output)
+        self.assertIn("UPSTREAM_UPDATE", output)
+        self.assertIn("LOCAL_DIVERGENCE", output)
+        code, diff, _ = self.run_command("diff")
+        self.assertIn("→ Upstream ", diff)
+        self.assertIn("→ Local .agents/skills/guide", diff)
+
+    def test_missing_installation_and_upstream_removal(self):
+        import shutil
+        shutil.rmtree(self.project / ".agents/skills/guide")
+        code, output, _ = self.run_command()
+        self.assertEqual(code, 0)
+        self.assertIn("codex: MISSING_INSTALLATION", output)
+        self.write_source_tree("Guide A line.\n", "helper A line.\n", b"\x00A")
+        shutil.rmtree(self.source / "skills/guide")
+        self.git(self.source, "add", "-A")
+        self.git(self.source, "commit", "-qm", "remove upstream skill")
+        self.git(self.source, "push", "origin", "main")
+        code, output, _ = self.run_command()
+        self.assertEqual(code, 0)
+        self.assertIn("UPSTREAM_REMOVED", output)
+
+    def test_binary_resource_changes_show_digests(self):
+        self.push_revision_b(binary=b"\x00B", add_file=False)
+        code, diff, errors = self.run_command("diff")
+        self.assertEqual(code, 0, errors)
+        self.assertIn("Binary resource assets/data.bin: modified", diff)
+        self.assertIn("sha256=", diff)
+
+    def test_unknown_baseline_reports_local_changes_without_fabricated_diff(self):
+        target = self.project / ".agents/skills/guide/references/helper.md"
+        target.write_text("changed since import\n", encoding="utf-8")
+        self.write_manifest(baseline_state="unknown")
+        code, output, errors = self.run_command()
+        self.assertEqual(code, 0, errors)
+        self.assertIn("UNKNOWN_BASELINE, LOCAL_DIVERGENCE", output)
+        code, diff, _ = self.run_command("diff")
+        self.assertIn("text diff unavailable", diff)
+        self.assertNotIn("Baseline unknown/skills/guide", diff)
+
+    def test_targets_are_reported_independently(self):
+        (self.project / ".agents/skills/guide/SKILL.md").write_text("codex edit", encoding="utf-8")
+        code, output, _ = self.run_command()
+        self.assertEqual(code, 0)
+        self.assertIn("codex: LOCAL_DIVERGENCE", output)
+        self.assertIn("claude-code: CURRENT", output)
+
+    def test_unavailable_source_is_explicit_and_no_cache_is_claimed(self):
+        self.write_manifest(source="https://example.invalid/missing.git")
+        code, output, errors = self.run_command()
+        self.assertEqual(code, 0, errors)
+        self.assertIn("SOURCE_UNAVAILABLE", output)
+        self.assertIn("no cached source was used", output)
+
+    def test_unknown_target_is_unsupported_without_reading_arbitrary_path(self):
+        entry_target = {"assistant": "future-agent", "path": "AGENTS.md", "state": "installed"}
+        self.write_manifest(targets=[entry_target])
+        code, output, errors = self.run_command()
+        self.assertEqual(code, 0, errors)
+        self.assertIn("future-agent: UNSUPPORTED_TARGET", output)
+        self.assertNotIn("LOCAL_DIVERGENCE", output)
+
+    def test_configured_tag_ref_is_not_silently_switched_to_branch_head(self):
+        self.git(self.source, "tag", "release-a", self.revision_a)
+        self.git(self.source, "push", "origin", "refs/tags/release-a")
+        self.push_revision_b()
+        self.write_manifest(configured_ref="refs/tags/release-a")
+        code, output, errors = self.run_command()
+        self.assertEqual(code, 0, errors)
+        self.assertIn("configured ref: refs/tags/release-a", output)
+        self.assertIn(f"current upstream: {self.revision_a} (fresh)", output)
+        self.assertIn("CURRENT", output)
+        self.assertNotIn("UPSTREAM_UPDATE", output)
+
+    def test_unavailable_recorded_revision_is_not_replaced_with_current(self):
+        self.write_manifest(revision="0" * 40)
+        code, output, errors = self.run_command()
+        self.assertEqual(code, 0, errors)
+        self.assertIn("SOURCE_UNAVAILABLE", output)
+        self.assertIn("cannot retrieve recorded revision", output)
+        self.assertIn("current upstream:", output)
+        self.assertNotIn("UPSTREAM_UPDATE", output)
+        self.assertNotIn("CURRENT", output)
+
+    def test_invalid_manifest_and_symlink_conflicts_fail_clearly(self):
+        self.write_manifest()
+        malformed = json.loads(self.manifest_path.read_text())
+        malformed["artifacts"].append(malformed["artifacts"][0])
+        self.manifest_path.write_text(json.dumps(malformed), encoding="utf-8")
+        code, _, errors = self.run_command()
+        self.assertEqual(code, 2)
+        self.assertIn("duplicate artifact identity", errors)
+        self.write_manifest()
+        import shutil
+        shutil.rmtree(self.project / ".agents/skills/guide")
+        outside = self.base / "outside"
+        shutil.copytree(self.source / "skills/guide", outside)
+        os.symlink(outside, self.project / ".agents/skills/guide")
+        code, output, errors = self.run_command()
+        self.assertEqual(code, 0, errors)
+        self.assertIn("codex: DESTINATION_CONFLICT", output)
+        self.assertTrue((outside / "SKILL.md").is_file())
+
+    def test_malicious_source_scheme_and_ref_are_rejected_before_git_access(self):
+        self.write_manifest(source="ext://command/example")
+        with patch.object(SETUPSMITH, "resolve_source") as resolve:
+            code, _, errors = self.run_command()
+        self.assertEqual(code, 2)
+        self.assertIn("invalid source locator", errors)
+        resolve.assert_not_called()
+        self.write_manifest(configured_ref="--upload-pack=command")
+        with patch.object(SETUPSMITH, "resolve_source") as resolve:
+            code, _, errors = self.run_command()
+        self.assertEqual(code, 2)
+        self.assertIn("unsafe configured ref", errors)
+        resolve.assert_not_called()
+
+    def test_repeated_check_is_stable_and_read_only(self):
+        before = self.tree_snapshot()
+        first = self.run_command()
+        second = self.run_command()
+        self.assertEqual(first, second)
+        self.assertEqual(self.tree_snapshot(), before)
+        diff = self.run_command("diff")
+        self.assertEqual(self.tree_snapshot(), before)
 
 if __name__ == "__main__":
     unittest.main()
