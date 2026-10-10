@@ -57,15 +57,15 @@ SetupSmith adds **guided adoption and deterministic lifecycle management** to th
 
 ### 2. Recommend and select
 
-Each relevant recommendation is classified as **ADD / KEEP EXISTING / REPLACE / SKIP**, with concise evidence, existing overlap, installation eligibility, and a proposed destination. Unsupported or uncertain installations must be identified; they are not silently considered installed. The user selects individual items or an eligible set; selecting recommendations is not approval to write.
+Each relevant recommendation is classified as **ADD / KEEP EXISTING / REPLACE / SKIP**, with concise evidence, existing overlap, catalog adoption status (e.g. `testing` vs. `default`) when available, installation eligibility, and a proposed destination. A catalog item's status is not proof that any particular project adopted it. Unsupported or uncertain installations must be identified; they are not silently considered installed. The user selects individual items or an eligible set; selecting recommendations is not approval to write.
 
-The catalog may recommend skills, rules, agents, and templates, but **the MVP installs and synchronizes only skills with verified Codex/Claude Code support**. Rules, agents, and templates are recommendations/reference items in this release, not promised native installations. Templates used to create project documents are never automatically synchronized back to the template.
+The catalog may recommend skills, rules, agents, and templates, but **the MVP installs and synchronizes only skills with verified Codex/Claude Code support**. Rules, agents, and templates are recommendations/reference items in this release, not promised native installations; they must appear as **reference-only** in the selection UI rather than as successfully installed managed items. Templates used to create project documents are never automatically synchronized back to the template.
 
 ### 3. Preview and install
 
 The manager identifies existing installations, exact canonical matches, unmapped local configurations, and occupied destinations. It offers explicit adoption of a known existing artifact without replacing it. Ambiguous matches require a user-provided mapping; name/path heuristics alone do not establish a verified baseline. An imported unknown-baseline copy is recorded as observed/customized and protected from automated replacement; it is not represented as fully reproducible from the canonical source.
 
-Before any change, show the selected items, destinations, expected additions/replacements, diffs and conflicts. Obtain **one explicit final confirmation per proposed batch**. Never overwrite unmanaged files or project-owned instructions (including `AGENTS.md` and `CLAUDE.md`) through ordinary installation; changes to those files require their own reviewed proposal.
+Before any change, show the selected items, destinations, expected additions/replacements, diffs and conflicts. Obtain **one explicit final confirmation per proposed batch**. If the invoking agent cannot surface the CLI's interactive confirmation, it must give the user the exact preview and a command to execute in their terminal; it must not bypass approval to make the workflow appear automatic. Never overwrite unmanaged files or project-owned instructions (including `AGENTS.md` and `CLAUDE.md`) through ordinary installation; changes to those files require their own reviewed proposal.
 
 Use assistant-native discovery locations, checking actual client support. Existing `.codex/` or `.ai/skills/` layouts may be imported without pretending they are automatically discoverable by every client. If one requested target is unsupported, report it before approval and require the user to adjust the selection; never claim a partially supported target set is fully installed. Installation does not execute scripts bundled with an artifact.
 
@@ -99,7 +99,7 @@ The manifest records the state actually achieved, not merely the requested plan.
 
 **FR-02 — Guided analysis.** `setup-ai` inspects only relevant project evidence; explains recommendations and loads the canonical `ai-config-builder` and `project-audit` procedures on demand without requiring them to be separately installed. Analysis must work before the CLI is installed, with an actionable error if the necessary catalog cannot be accessed.
 
-**FR-03 — User choice.** Classify ADD/KEEP EXISTING/REPLACE/SKIP. Preserve project-specific behavior. User chooses exact artifacts and assistant targets.
+**FR-03 — User choice.** Classify ADD/KEEP EXISTING/REPLACE/SKIP, distinguish reference-only recommendations from installable skills, and display catalog adoption status when available. Preserve project-specific behavior. User chooses exact installable artifacts and assistant targets.
 
 **FR-04 — Managed installations.** Install verified native skills, including any supporting resources, for Codex and Claude Code. Explicitly distinguish unsupported/legacy layout from native discovery.
 
@@ -178,7 +178,7 @@ A CLI is required; its exact spelling is not fixed by this specification. The `/
 ## Acceptance criteria
 
 - [ ] Installing only `setup-ai` allows an agent to begin guided setup in an existing Git project without installing the whole catalog or preinstalling the SetupSmith CLI. It loads relevant canonical procedures on demand.
-- [ ] Analysis of CappyCode identifies existing AI configuration and recommends only relevant catalog items with ADD/KEEP EXISTING/REPLACE/SKIP rationale.
+- [ ] Analysis of CappyCode identifies existing AI configuration and recommends only relevant catalog items with ADD/KEEP EXISTING/REPLACE/SKIP rationale, differentiating supported installations from reference-only advice.
 - [ ] CappyHub can be analyzed independently and use a different adopted selection or revision.
 - [ ] An existing locally customized skill can be explicitly adopted without content loss or fabricated baseline.
 - [ ] Selected supported skills are discoverable by Codex and Claude Code at their actual native locations.
