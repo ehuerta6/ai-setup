@@ -120,13 +120,13 @@ Execute the repository's Git and GitHub workflow for branches, commits, issues, 
 
 Project-specific Git rules override its defaults.
 
-### `issue-batch-orchestrator`
+### `issue-flow`
 
-Path: `skills/issue-batch-orchestrator/SKILL.md`
+Path: `skills/issue-flow/SKILL.md`
 
-Analyze multiple GitHub Issues and build safe parallel or sequential execution waves.
+Plan existing GitHub Issues into dependency-aware batches, generate a prompt for a selected batch, and update the plan as repository state changes.
 
-Optimizes for maximum safe parallelism and explicit merge gates.
+Unlike `to-issues`, it does not create issues. Unlike the `batch-orchestrator` agent, it prepares the plan and prompt rather than executing the batch.
 
 ## Stack-specific
 
