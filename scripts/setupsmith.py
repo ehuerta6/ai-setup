@@ -258,6 +258,30 @@ def tree_identity(skill_dir: Path) -> tuple[str, dict[str, str], list[Path]]:
     return digest.hexdigest(), file_hashes, files
 
 
+def tree_directories(skill_dir: Path) -> set[str]:
+    """Return nested directory paths, rejecting links and special entries."""
+    result = set()
+    for path in skill_dir.rglob("*"):
+        relative = path.relative_to(skill_dir)
+        if path.is_symlink():
+            raise InstallError(f"unsafe tree symlink: {relative.as_posix()}")
+        if path.is_dir():
+            result.add(relative.as_posix())
+        elif not path.is_file():
+            raise InstallError(f"unsupported tree entry: {relative.as_posix()}")
+    return result
+
+
+def directories_for_files(files: dict[str, str]) -> set[str]:
+    result = set()
+    for relative in files:
+        parent = PurePosixPath(relative).parent
+        while parent != PurePosixPath("."):
+            result.add(parent.as_posix())
+            parent = parent.parent
+    return result
+
+
 def portable_source_locator(source: str) -> str:
     """Return a portable, credential-free source locator for the manifest."""
     candidate = source
@@ -1340,6 +1364,7 @@ def check_project(args: argparse.Namespace, *, include_text: bool, collect: bool
                     baseline_contents, {}, f"Baseline {baseline_revision}", "Upstream removed", include_text=include_text)
             for target in sorted(entry["targets"], key=lambda value: (value["assistant"], value["path"])):
                 statuses = []
+                recovery = target.get("recovery")
                 assistant = target["assistant"]
                 if assistant not in {"codex", "claude-code"}:
                     statuses.append("UNSUPPORTED_TARGET")
@@ -1352,7 +1377,8 @@ def check_project(args: argparse.Namespace, *, include_text: bool, collect: bool
                 if assistant not in {"codex", "claude-code", "codex-legacy", "legacy"}:
                     item["targets"].append({"assistant": assistant, "path": target["path"],
                                              "statuses": statuses, "local_changes": [],
-                                             "local_error": None, "local_patches": []})
+                                             "local_error": None, "local_patches": [],
+                                             "recovery": recovery, "directory_changes": {"added": [], "missing": []}})
                     continue
                 target_path = PurePosixPath(target["path"])
                 try:
@@ -1361,22 +1387,37 @@ def check_project(args: argparse.Namespace, *, include_text: bool, collect: bool
                     if not local_dir.exists() and not local_dir.is_symlink():
                         statuses.append("MISSING_INSTALLATION")
                         local_hashes = local_contents = None
+                        local_directories = None
                     elif local_dir.is_symlink() or not local_dir.is_dir():
                         statuses.append("DESTINATION_CONFLICT")
                         local_hashes = local_contents = None
+                        local_directories = None
                     elif not (local_dir / "SKILL.md").is_file():
                         statuses.append("DESTINATION_CONFLICT")
                         local_hashes = local_contents = None
+                        local_directories = None
                     else:
                         _, local_hashes, local_contents = content_tree(local_dir)
+                        local_directories = tree_directories(local_dir)
                 except (InstallError, OSError) as exc:
                     statuses.append("DESTINATION_CONFLICT")
                     local_hashes = local_contents = None
+                    local_directories = None
                     local_error = str(exc)
                 else:
                     local_error = None
 
                 expected_hashes = entry["files"]
+                expected_directories = directories_for_files(expected_hashes)
+                directories_match = local_directories == expected_directories
+                directory_changes = {"added": sorted(local_directories - expected_directories),
+                                     "missing": sorted(expected_directories - local_directories)} \
+                    if local_directories is not None else {"added": [], "missing": []}
+                if local_hashes is not None and not directories_match:
+                    statuses.append("LOCAL_DIVERGENCE")
+                if isinstance(recovery, dict) and recovery.get("state") == "incomplete" and (
+                        local_hashes != expected_hashes or not directories_match):
+                    statuses.append("RECOVERY_INCOMPLETE")
                 local_changes = []
                 local_patches = []
                 if local_hashes is not None:
@@ -1401,13 +1442,15 @@ def check_project(args: argparse.Namespace, *, include_text: bool, collect: bool
                     statuses.append("UPSTREAM_UPDATE")
                 if (baseline_state == "verified" and baseline_contents is not None
                         and local_hashes == entry["files"] and upstream_hashes == entry["files"]
-                        and assistant in {"codex", "claude-code"}):
+                        and directories_match and assistant in {"codex", "claude-code"}):
                     statuses.append("CURRENT")
                 if not statuses:
                     statuses.append("CURRENT")
                 target_report = {"assistant": assistant, "path": target["path"],
                                  "statuses": statuses, "local_changes": local_changes,
                                  "local_error": local_error,
+                                 "recovery": recovery if "RECOVERY_INCOMPLETE" in statuses else None,
+                                 "directory_changes": directory_changes,
                                  "local_patches": local_patches if include_text else [],
                                  "_local_hashes": local_hashes,
                                  "_local_contents": local_contents if local_hashes is not None else None}
@@ -1434,8 +1477,12 @@ def check_project(args: argparse.Namespace, *, include_text: bool, collect: bool
             for target_report in item["targets"]:
                 print(f"  {target_report['assistant']}: {', '.join(target_report['statuses'])}")
                 print(f"    path: {target_report['path']}")
+                if target_report.get("recovery"):
+                    print(f"    recovery: {json.dumps(target_report['recovery'], sort_keys=True)}")
                 if target_report["local_error"]:
                     print(f"    destination note: {target_report['local_error']}")
+                if any(target_report["directory_changes"].values()):
+                    print(f"    local directory changes: {json.dumps(target_report['directory_changes'], sort_keys=True)}")
                 for change in target_report["local_changes"]:
                     print(f"    local {change['change']}: {change['path']} "
                           f"({change['before_sha256'] or 'missing'} → {change['after_sha256'] or 'missing'})")
@@ -1458,6 +1505,10 @@ def update_project(args: argparse.Namespace) -> int:
     inspection_args = copy.copy(args)
     inspection_args.skill = None
     reports = check_project(inspection_args, include_text=True, collect=True)
+    try:
+        project_root = Path(git("rev-parse", "--show-toplevel", cwd=Path(args.project).expanduser())).resolve()
+    except DiscoveryError as exc:
+        raise CheckError("target must be inside a Git project") from exc
     safe: dict[str, dict] = {}
     exclusions: dict[str, str] = {}
     for item in reports:
@@ -1480,6 +1531,14 @@ def update_project(args: argparse.Namespace) -> int:
                     break
                 if target["_local_hashes"] != entry["files"]:
                     reason = f"target {target['path']} is missing, unsafe, or differs from baseline"
+                    break
+                try:
+                    target_path = project_root / Path(*PurePosixPath(target["path"]).parts)
+                    if tree_directories(target_path) != directories_for_files(entry["files"]):
+                        reason = f"target {target['path']} contains unexpected directories"
+                        break
+                except (InstallError, OSError):
+                    reason = f"target {target['path']} is missing or unsafe"
                     break
         if reason:
             exclusions[item["id"]] = reason
@@ -1514,7 +1573,7 @@ def update_project(args: argparse.Namespace) -> int:
         print("No artifacts selected; no project files changed.")
         return 0
 
-    root = Path(git("rev-parse", "--show-toplevel", cwd=Path(args.project).expanduser())).resolve()
+    root = project_root
     manifest_rel = Path(".setupsmith/manifest.json")
     manifest_path = root / manifest_rel
     manifest = load_check_manifest(manifest_path)
@@ -1544,6 +1603,8 @@ def update_project(args: argparse.Namespace) -> int:
         proposed.update({"revision": item["upstream_revision"],
                          "content_digest": item["_upstream_digest"],
                          "files": item["_upstream_hashes"]})
+        for target in proposed["targets"]:
+            target.pop("recovery", None)
     print("\nManifest changes:")
     print(json.dumps(proposed_entries, indent=2, sort_keys=True))
     if args.preview_only:
@@ -1590,7 +1651,8 @@ def update_project(args: argparse.Namespace) -> int:
                 stage = temporary / f"staged-{stage_index}"
                 stage_index += 1
                 shutil.copytree(source_tree, stage, symlinks=False)
-                if tree_identity(stage)[0] != item["_upstream_digest"]:
+                if (tree_identity(stage)[0] != item["_upstream_digest"]
+                        or tree_directories(stage) != directories_for_files(item["_upstream_hashes"])):
                     raise CheckError(f"staged content verification failed for {artifact}")
                 staged[(artifact, target["path"])] = stage
 
@@ -1604,10 +1666,11 @@ def update_project(args: argparse.Namespace) -> int:
                 if file_hashes_on_disk(root / relative) != item["_entry"]["files"]:
                     raise CheckError(f"stale preview: destination changed during staging: {target['path']}")
 
-        backups: list[tuple[Path, Path]] = []
-        installed: list[tuple[Path, str]] = []
+        backups: list[dict] = []
+        installed: list[dict] = []
         old_manifest = manifest_path.read_bytes()
         new_manifest_bytes = None
+        temp_file = None
         backup_root = Path(tempfile.mkdtemp(prefix=".setupsmith-recovery-", dir=root))
         try:
             for artifact, item in changes.items():
@@ -1615,14 +1678,25 @@ def update_project(args: argparse.Namespace) -> int:
                     relative = Path(*PurePosixPath(target["path"]).parts)
                     destination = root / relative
                     ensure_no_symlink_components(root, relative)
-                    if file_hashes_on_disk(destination) != item["_entry"]["files"]:
+                    if (file_hashes_on_disk(destination) != item["_entry"]["files"]
+                            or tree_identity(destination)[0] != item["_entry"]["content_digest"]
+                            or tree_directories(destination) != directories_for_files(item["_entry"]["files"])):
                         raise CheckError(f"stale preview: destination changed before replacement: {target['path']}")
                     backup = backup_root / f"backup-{len(backups)}"
                     os.replace(destination, backup)
-                    backups.append((destination, backup))
+                    backups.append({"destination": destination, "backup": backup, "artifact": artifact,
+                                    "target": target, "files": item["_entry"]["files"],
+                                    "digest": item["_entry"]["content_digest"]})
+                    if (file_hashes_on_disk(backup) != item["_entry"]["files"]
+                            or tree_identity(backup)[0] != item["_entry"]["content_digest"]
+                            or tree_directories(backup) != directories_for_files(item["_entry"]["files"])):
+                        raise CheckError(f"destination changed while being staged: {target['path']}")
                     os.replace(staged[(artifact, target["path"])], destination)
-                    installed.append((destination, item["_upstream_digest"]))
-                    if tree_identity(destination)[0] != item["_upstream_digest"]:
+                    installed.append({"destination": destination, "artifact": artifact, "target": target,
+                                      "files": item["_upstream_hashes"], "digest": item["_upstream_digest"]})
+                    if (file_hashes_on_disk(destination) != item["_upstream_hashes"]
+                            or tree_identity(destination)[0] != item["_upstream_digest"]
+                            or tree_directories(destination) != directories_for_files(item["_upstream_hashes"])):
                         raise InstallError(f"installed content verification failed: {target['path']}")
             data = (json.dumps(proposed_manifest, indent=2, sort_keys=True) + "\n").encode("utf-8")
             if manifest_path.read_bytes() != old_manifest:
@@ -1636,28 +1710,56 @@ def update_project(args: argparse.Namespace) -> int:
             os.replace(temp_file, manifest_path)
         except Exception as exc:
             errors = []
-            for path, expected_digest in reversed(installed):
+            for record in reversed(installed):
+                path = record["destination"]
                 try:
-                    if not path.is_dir() or tree_identity(path)[0] != expected_digest:
+                    if not path.exists() and not path.is_symlink():
+                        continue
+                    if (not path.is_dir() or file_hashes_on_disk(path) != record["files"]
+                            or tree_identity(path)[0] != record["digest"]
+                            or tree_directories(path) != directories_for_files(record["files"])):
                         errors.append(f"did not remove concurrent changes at {path.relative_to(root)}")
                     else:
-                        shutil.rmtree(path)
-                except OSError as rollback:
+                        displaced = backup_root / f"new-{len(errors)}"
+                        os.replace(path, displaced)
+                        if (file_hashes_on_disk(displaced) != record["files"]
+                                or tree_identity(displaced)[0] != record["digest"]
+                                or tree_directories(displaced) != directories_for_files(record["files"])):
+                            if not path.exists() and not path.is_symlink():
+                                os.replace(displaced, path)
+                            errors.append(f"concurrent changes appeared while rolling back {path.relative_to(root)}")
+                        else:
+                            shutil.rmtree(displaced)
+                except (InstallError, OSError) as rollback:
                     errors.append(f"could not remove {path.relative_to(root)}: {rollback}")
-            for destination, backup in reversed(backups):
+            for record in reversed(backups):
+                destination, backup = record["destination"], record["backup"]
                 try:
                     if destination.exists() or destination.is_symlink():
                         errors.append(f"did not overwrite concurrent destination {destination.relative_to(root)}")
+                    elif (not backup.is_dir() or file_hashes_on_disk(backup) != record["files"]
+                          or tree_identity(backup)[0] != record["digest"]
+                          or tree_directories(backup) != directories_for_files(record["files"])):
+                        if backup.is_dir() and not backup.is_symlink():
+                            os.replace(backup, destination)
+                            errors.append(f"restored changed content without overwriting it at {destination.relative_to(root)}; "
+                                          "reconcile it with the recorded baseline before retrying")
+                        else:
+                            errors.append(f"original backup changed; preserved at {backup.relative_to(root)}")
                     else:
                         os.replace(backup, destination)
-                except OSError as rollback:
+                        if (file_hashes_on_disk(destination) != record["files"]
+                                or tree_identity(destination)[0] != record["digest"]
+                                or tree_directories(destination) != directories_for_files(record["files"])):
+                            errors.append(f"restored content changed during recovery at {destination.relative_to(root)}")
+                except (InstallError, OSError) as rollback:
                     errors.append(f"could not restore {destination.relative_to(root)}: {rollback}")
-            unrestored = [(destination, backup) for destination, backup in backups if backup.exists()]
-            recovery_dir = backup_root if unrestored else None
+            unrestored = [record for record in backups if record["backup"].exists()]
+            recovery_dir = backup_root if unrestored or any(backup_root.iterdir()) else None
             if unrestored:
-                paths = ", ".join(str(destination.relative_to(root)) for destination, _ in unrestored)
+                paths = ", ".join(str(record["destination"].relative_to(root)) for record in unrestored)
                 errors.append(f"original backups preserved for {paths}")
-            else:
+            if recovery_dir is None:
                 try:
                     backup_root.rmdir()
                 except OSError as rollback:
@@ -1672,7 +1774,100 @@ def update_project(args: argparse.Namespace) -> int:
                     errors.append("did not overwrite concurrent manifest changes")
             except OSError as rollback:
                 errors.append(f"could not verify or restore manifest: {rollback}")
-            recovery_note = f"; original skill backup preserved at {recovery_dir.relative_to(root)}" if recovery_dir else ""
+            if temp_file:
+                try:
+                    Path(temp_file).unlink(missing_ok=True)
+                except OSError as cleanup_error:
+                    errors.append(f"could not remove manifest staging file: {cleanup_error}")
+
+            target_outcomes = []
+            incomplete = []
+            backup_by_target = {(record["artifact"], record["target"]["path"]): record
+                                for record in backups}
+            installed_by_target = {(record["artifact"], record["target"]["path"]): record
+                                   for record in installed}
+            for artifact, item in changes.items():
+                original_entry = item["_entry"]
+                for target in item["targets"]:
+                    target_key = (artifact, target["path"])
+                    destination = root / Path(*PurePosixPath(target["path"]).parts)
+                    old_matches = False
+                    new_matches = False
+                    observed_digest = None
+                    observed_state = "missing"
+                    try:
+                        if destination.is_symlink():
+                            observed_state = "unsafe"
+                        elif destination.is_dir():
+                            observed_digest, observed_hashes, _ = tree_identity(destination)
+                            observed_state = "present"
+                            old_matches = (observed_hashes == original_entry["files"]
+                                           and observed_digest == original_entry["content_digest"]
+                                           and tree_directories(destination) == directories_for_files(original_entry["files"]))
+                            new_matches = (observed_hashes == item["_upstream_hashes"]
+                                           and observed_digest == item["_upstream_digest"]
+                                           and tree_directories(destination) == directories_for_files(item["_upstream_hashes"]))
+                        elif destination.exists():
+                            observed_state = "unsupported"
+                    except (InstallError, OSError):
+                        observed_state = "unreadable or unsafe"
+                    if old_matches:
+                        label = "ROLLED BACK" if target_key in backup_by_target else "NOT ATTEMPTED"
+                    elif target_key not in backup_by_target and target_key not in installed_by_target:
+                        label = ("NOT ATTEMPTED: precondition changed; current destination content was preserved")
+                    elif new_matches:
+                        label = ("RECOVERY_INCOMPLETE: updated content remains but manifest baseline was not advanced; "
+                                 "manual recovery: reconcile this target with the recorded baseline before retrying")
+                        incomplete.append((artifact, target, destination, observed_state, observed_digest, None))
+                    else:
+                        record = backup_by_target.get(target_key)
+                        backup_path = record["backup"] if record and record["backup"].exists() else None
+                        label = f"RECOVERY_INCOMPLETE: destination is {observed_state}"
+                        if backup_path:
+                            label += (f"; original backup preserved at {backup_path.relative_to(root)}; "
+                                      "manual recovery: inspect the backup and destination, preserve both, then reconcile")
+                        else:
+                            label += "; manual recovery: reconcile the destination with the recorded baseline before retrying"
+                        incomplete.append((artifact, target, destination, observed_state, observed_digest, backup_path))
+                    target_outcomes.append(f"{target['path']}: {label}")
+
+            if incomplete:
+                recovery_temp_name = None
+                try:
+                    if manifest_path.read_bytes() != old_manifest:
+                        raise OSError("manifest changed during recovery")
+                    recovery_manifest = copy.deepcopy(manifest)
+                    for artifact, target, destination, observed_state, observed_digest, backup_path in incomplete:
+                        entry = next(entry for entry in recovery_manifest["artifacts"] if entry["id"] == artifact)
+                        manifest_target = next(value for value in entry["targets"] if value["path"] == target["path"])
+                        marker = {"state": "incomplete", "observed_state": observed_state,
+                                  "observed_digest": observed_digest}
+                        if backup_path:
+                            marker["recovery_path"] = backup_path.relative_to(root).as_posix()
+                        manifest_target["recovery"] = marker
+                    data = (json.dumps(recovery_manifest, indent=2, sort_keys=True) + "\n").encode("utf-8")
+                    fd, recovery_temp_name = tempfile.mkstemp(prefix=".manifest-recovery-", suffix=".tmp",
+                                                               dir=manifest_path.parent)
+                    with os.fdopen(fd, "wb") as output:
+                        output.write(data)
+                        output.flush()
+                        os.fsync(output.fileno())
+                    ensure_no_symlink_components(root, manifest_rel)
+                    if manifest_path.read_bytes() != old_manifest:
+                        raise OSError("manifest changed before recovery state write")
+                    os.replace(recovery_temp_name, manifest_path)
+                    errors.append("manifest records per-target incomplete recovery state")
+                except (OSError, InstallError, StopIteration) as recovery_write_error:
+                    errors.append(f"could not record incomplete recovery state in manifest: {recovery_write_error}")
+                finally:
+                    if recovery_temp_name:
+                        try:
+                            Path(recovery_temp_name).unlink(missing_ok=True)
+                        except OSError as cleanup_error:
+                            errors.append(f"could not remove recovery manifest staging file: {cleanup_error}")
+            if target_outcomes:
+                errors.append("target outcomes: " + "; ".join(target_outcomes))
+            recovery_note = f"; recovery data preserved at {recovery_dir.relative_to(root)}" if recovery_dir else ""
             raise InstallError(f"update failed: {exc}; " + ("; ".join(errors) if errors else "prior files restored")
                                + recovery_note) from exc
         try:

@@ -1735,6 +1735,7 @@ class SkillCheckTests(unittest.TestCase):
         self.push_revision_b(skill_text="Guide B line.\n")
         original_resolve = SETUPSMITH.resolve_source
         changed = False
+        before_manifest = self.manifest_path.read_bytes()
         def change_destination_after_preview(source, configured_ref, checkout):
             nonlocal changed
             resolved = original_resolve(self.source if source == "https://example.invalid/catalog.git" else source,
@@ -1745,7 +1746,6 @@ class SkillCheckTests(unittest.TestCase):
             else:
                 changed = True
             return resolved
-        before_manifest = self.manifest_path.read_bytes()
         output, errors = io.StringIO(), io.StringIO()
         with patch.object(SETUPSMITH, "resolve_source", side_effect=change_destination_after_preview), \
                 patch("builtins.input", return_value="UPDATE"), \
@@ -1756,6 +1756,8 @@ class SkillCheckTests(unittest.TestCase):
         self.assertIn("stale preview", errors.getvalue())
         self.assertIn("concurrent change", (self.project / ".agents/skills/guide/SKILL.md").read_text())
         self.assertEqual(self.manifest_path.read_bytes(), before_manifest)
+        manifest = json.loads(self.manifest_path.read_text(encoding="utf-8"))
+        self.assertFalse(any("recovery" in target for target in manifest["artifacts"][0]["targets"]))
 
     def test_update_refuses_source_or_manifest_changes_after_preview(self):
         self.push_revision_b(skill_text="Guide B line.\n")
@@ -1834,6 +1836,11 @@ class SkillCheckTests(unittest.TestCase):
         self.assertEqual(self.manifest_path.read_bytes(), before_manifest)
         for path, digest in before_trees.items():
             self.assertEqual(SETUPSMITH.tree_identity(self.project / path)[0], digest)
+        code, retry_output, retry_errors = self.run_update(response="UPDATE\n")
+        self.assertEqual(code, 0, retry_errors)
+        self.assertIn("Updated successfully", retry_output)
+        updated = json.loads(self.manifest_path.read_text(encoding="utf-8"))
+        self.assertNotEqual(updated["artifacts"][0]["revision"], self.revision_a)
 
     def test_update_never_removes_upstream_deleted_skill(self):
         import shutil
@@ -1882,12 +1889,149 @@ class SkillCheckTests(unittest.TestCase):
                 redirect_stdout(output), redirect_stderr(errors):
             code = SETUPSMITH.main(["update", "--project", str(self.project), "--all-safe"])
         self.assertEqual(code, 2)
-        self.assertIn("original skill backup preserved", errors.getvalue())
+        self.assertIn("original backups preserved", errors.getvalue())
         recovery_dirs = list(self.project.glob(".setupsmith-recovery-*"))
         self.assertEqual(len(recovery_dirs), 1)
         backups = list(recovery_dirs[0].iterdir())
         self.assertEqual(len(backups), 1)
         self.assertEqual(SETUPSMITH.tree_identity(backups[0])[0], baseline_digest)
+        manifest = json.loads(self.manifest_path.read_text(encoding="utf-8"))
+        self.assertEqual(manifest["artifacts"][0]["revision"], self.revision_a)
+        recovery_targets = [target for target in manifest["artifacts"][0]["targets"] if "recovery" in target]
+        self.assertEqual(len(recovery_targets), 1)
+        self.assertEqual(recovery_targets[0]["recovery"]["state"], "incomplete")
+        code, report, errors = self.run_command()
+        self.assertEqual(code, 0, errors)
+        self.assertIn("RECOVERY_INCOMPLETE", report)
+        self.assertIn("recovery_path", report)
+
+    def test_update_rollback_preserves_concurrent_edit_and_records_incomplete_target(self):
+        self.push_revision_b(skill_text="Guide B line.\n")
+        original_replace = os.replace
+        original_resolve = SETUPSMITH.resolve_source
+        def edit_codex_then_fail_claude(source, destination):
+            source_text, destination_text = str(source), str(destination)
+            if destination_text.endswith("/.agents/skills/guide") and "/staged-" in source_text:
+                claude_skill = self.project / ".claude/skills/guide/SKILL.md"
+                claude_skill.write_text(claude_skill.read_text() + "concurrent edit\n", encoding="utf-8")
+                raise OSError("injected second target placement failure")
+            if (destination_text.endswith("/.claude/skills/guide")
+                    and "/.setupsmith-recovery-" in source_text):
+                raise OSError("injected rollback refusal")
+            return original_replace(source, destination)
+        output, errors = io.StringIO(), io.StringIO()
+        with patch.object(os, "replace", side_effect=edit_codex_then_fail_claude), \
+                patch.object(SETUPSMITH, "resolve_source", side_effect=lambda source, ref, checkout:
+                             original_resolve(self.source if source == "https://example.invalid/catalog.git"
+                                              else source, ref, checkout)), \
+                patch("builtins.input", return_value="UPDATE"), \
+                patch.object(sys, "stdin", type("TTY", (io.StringIO,), {"isatty": lambda self: True})("")), \
+                redirect_stdout(output), redirect_stderr(errors):
+            code = SETUPSMITH.main(["update", "--project", str(self.project), "--all-safe"])
+        self.assertEqual(code, 2)
+        self.assertIn("did not overwrite concurrent destination .claude/skills/guide", errors.getvalue())
+        self.assertIn("target outcomes", errors.getvalue())
+        self.assertIn("RECOVERY_INCOMPLETE", errors.getvalue())
+        claude_skill = self.project / ".claude/skills/guide/SKILL.md"
+        self.assertIn("concurrent edit", claude_skill.read_text())
+        manifest = json.loads(self.manifest_path.read_text(encoding="utf-8"))
+        self.assertEqual(manifest["artifacts"][0]["revision"], self.revision_a)
+        self.assertTrue(any(target.get("recovery", {}).get("state") == "incomplete"
+                            for target in manifest["artifacts"][0]["targets"]))
+        self.assertEqual(SETUPSMITH.tree_identity(self.project / ".agents/skills/guide")[0], self.digest(self.revision_a))
+
+    def test_update_retry_after_reconciliation_clears_recovery_marker(self):
+        revision_b = self.push_revision_b(skill_text="Guide B line.\n")
+        manifest = json.loads(self.manifest_path.read_text(encoding="utf-8"))
+        for target in manifest["artifacts"][0]["targets"]:
+            target["recovery"] = {"state": "incomplete", "observed_state": "present"}
+        self.manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+        code, output, errors = self.run_update(selection=("--all-safe",), response="UPDATE\n")
+        self.assertEqual(code, 0, errors)
+        self.assertIn("Updated successfully", output)
+        updated = json.loads(self.manifest_path.read_text(encoding="utf-8"))
+        self.assertEqual(updated["artifacts"][0]["revision"], revision_b)
+        self.assertTrue(all("recovery" not in target for target in updated["artifacts"][0]["targets"]))
+
+    def test_update_detects_concurrent_edit_while_staging_original_backup(self):
+        self.push_revision_b(skill_text="Guide B line.\n")
+        original_replace = os.replace
+        original_resolve = SETUPSMITH.resolve_source
+        def edit_before_backup(source, destination):
+            if str(destination).endswith("backup-0"):
+                target_file = self.project / ".claude/skills/guide/SKILL.md"
+                target_file.write_text(target_file.read_text() + "concurrent edit\n", encoding="utf-8")
+            return original_replace(source, destination)
+        output, errors = io.StringIO(), io.StringIO()
+        with patch.object(os, "replace", side_effect=edit_before_backup), \
+                patch.object(SETUPSMITH, "resolve_source", side_effect=lambda source, ref, checkout:
+                             original_resolve(self.source if source == "https://example.invalid/catalog.git"
+                                              else source, ref, checkout)), \
+                patch("builtins.input", return_value="UPDATE"), \
+                patch.object(sys, "stdin", type("TTY", (io.StringIO,), {"isatty": lambda self: True})("")), \
+                redirect_stdout(output), redirect_stderr(errors):
+            code = SETUPSMITH.main(["update", "--project", str(self.project), "--all-safe"])
+        self.assertEqual(code, 2)
+        self.assertIn("destination changed while being staged", errors.getvalue())
+        self.assertIn("restored changed content without overwriting it", errors.getvalue())
+        target_file = self.project / ".claude/skills/guide/SKILL.md"
+        self.assertIn("concurrent edit", target_file.read_text())
+        manifest = json.loads(self.manifest_path.read_text(encoding="utf-8"))
+        self.assertEqual(manifest["artifacts"][0]["revision"], self.revision_a)
+        self.assertTrue(any(target.get("recovery", {}).get("state") == "incomplete"
+                            for target in manifest["artifacts"][0]["targets"]))
+
+    def test_update_batch_reports_rollback_for_each_independent_artifact(self):
+        other_source = self.source / "skills/other"
+        other_source.mkdir(parents=True)
+        (other_source / "SKILL.md").write_text(
+            "---\nname: other\ndescription: Independent fixture skill.\n---\nOther A.\n", encoding="utf-8")
+        self.git(self.source, "add", ".")
+        self.git(self.source, "commit", "-qm", "add independent skill")
+        revision_a = self.git(self.source, "rev-parse", "HEAD")
+        self.git(self.source, "push", "origin", "main")
+        other_digest, other_hashes, _ = SETUPSMITH.tree_identity(other_source)
+        other_target = self.project / ".agents/skills/other"
+        other_target.parent.mkdir(parents=True, exist_ok=True)
+        import shutil
+        shutil.copytree(other_source, other_target)
+        manifest = json.loads(self.manifest_path.read_text(encoding="utf-8"))
+        manifest["artifacts"].append({"id": "skills/other", "source": "https://example.invalid/catalog.git",
+                                      "configured_ref": "refs/heads/main", "revision": revision_a,
+                                      "content_digest": other_digest, "files": other_hashes,
+                                      "targets": [{"assistant": "codex", "path": ".agents/skills/other",
+                                                   "state": "installed"}]})
+        self.manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+        (self.source / "skills/guide/SKILL.md").write_text(
+            "---\nname: guide\ndescription: Fixture comparison skill.\n---\nGuide B line.\n", encoding="utf-8")
+        (other_source / "SKILL.md").write_text(
+            "---\nname: other\ndescription: Independent fixture skill.\n---\nOther B.\n", encoding="utf-8")
+        self.git(self.source, "add", ".")
+        self.git(self.source, "commit", "-qm", "update independent skills")
+        self.git(self.source, "push", "origin", "main")
+        original_replace = os.replace
+        original_resolve = SETUPSMITH.resolve_source
+        def fail_other_install(source, destination):
+            if str(destination).endswith("/.agents/skills/other") and "/staged-" in str(source):
+                raise OSError("injected second artifact failure")
+            return original_replace(source, destination)
+        output, errors = io.StringIO(), io.StringIO()
+        with patch.object(os, "replace", side_effect=fail_other_install), \
+                patch.object(SETUPSMITH, "resolve_source", side_effect=lambda source, ref, checkout:
+                             original_resolve(self.source if source == "https://example.invalid/catalog.git"
+                                              else source, ref, checkout)), \
+                patch("builtins.input", return_value="UPDATE"), \
+                patch.object(sys, "stdin", type("TTY", (io.StringIO,), {"isatty": lambda self: True})("")), \
+                redirect_stdout(output), redirect_stderr(errors):
+            code = SETUPSMITH.main(["update", "--project", str(self.project), "--all-safe"])
+        self.assertEqual(code, 2)
+        self.assertIn(".agents/skills/other: ROLLED BACK", errors.getvalue())
+        self.assertIn(".agents/skills/guide: ROLLED BACK", errors.getvalue())
+        self.assertEqual(SETUPSMITH.tree_identity(self.project / ".agents/skills/guide")[0], self.digest(self.revision_a))
+        self.assertEqual(SETUPSMITH.tree_identity(other_target)[0], other_digest)
+        after = json.loads(self.manifest_path.read_text(encoding="utf-8"))
+        self.assertEqual({entry["id"]: entry["revision"] for entry in after["artifacts"]},
+                         {"skills/guide": self.revision_a, "skills/other": revision_a})
 
     def test_malicious_source_scheme_and_ref_are_rejected_before_git_access(self):
         self.write_manifest(source="ext://command/example")

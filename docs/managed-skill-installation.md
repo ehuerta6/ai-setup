@@ -114,7 +114,8 @@ The manifest determines which artifact and target SetupSmith manages. The filesy
 | --- | --- |
 | `CURRENT` | Verified baseline, current upstream, and this target's files match. |
 | `UPSTREAM_UPDATE` | The configured upstream tree differs from the verified baseline. |
-| `LOCAL_DIVERGENCE` | This target's files differ from the recorded baseline or, for unknown baselines, from the observed hashes at adoption. |
+| `LOCAL_DIVERGENCE` | This target's files or directory structure differ from the recorded baseline or, for unknown baselines, from the observed hashes at adoption. |
+| `RECOVERY_INCOMPLETE` | A previous update could not restore this target to its recorded baseline. The report includes the observed state and any preserved recovery path. |
 | `MISSING_INSTALLATION` | The recorded destination is absent. |
 | `UPSTREAM_REMOVED` | The configured current source no longer contains the skill. Local files are preserved. |
 | `UNKNOWN_BASELINE` | No historical canonical revision is claimed; only observed local hashes can be checked. |
@@ -141,7 +142,7 @@ Use `--all-safe` to select every eligible update or `--none` to select none. The
 
 An artifact is excluded from `--all-safe` when its baseline is unknown, a recorded target is missing, locally changed, unsafe, or unsupported, the source or pinned baseline cannot be verified, the upstream artifact was removed, or any target in its managed target set is unsafe. Requesting an excluded artifact explicitly is refused. A no-update artifact is not selected as work. Upstream removal never deletes an installed skill.
 
-After confirmation, SetupSmith re-resolves each configured ref, checks that its revision, manifest, and every selected destination still match the approved preview, stages and hashes complete trees, then replaces all targets for each selected artifact and advances only those manifest baselines. A changed source ref, destination, or manifest makes the preview stale and refuses application. Repeating an update after the target revision is recorded is a no-op. On an application failure, the CLI attempts to restore replaced target trees and the prior manifest and reports rollback failures. This is not the advanced multi-target recovery workflow tracked separately in Issue #16.
+After confirmation, SetupSmith re-resolves each configured ref, checks that its revision, manifest, and every selected destination still match the approved preview, stages and hashes complete trees, then replaces all targets for each selected artifact and advances only those manifest baselines. A changed source ref, destination, or manifest makes the preview stale and refuses application. Repeating an update after the target revision is recorded is a no-op. On an application failure, the CLI verifies and attempts to restore replaced target trees and the prior manifest. It reports the state of every affected target and preserves original backups when safe restoration is blocked. If recovery is incomplete, the schema-1 manifest keeps its prior canonical baseline and adds an optional per-target `recovery` object containing `state: "incomplete"`, the observed filesystem state/digest, and a relative recovery path when a backup remains. This additive observation does not claim canonical provenance. `check` reports `RECOVERY_INCOMPLETE` while the target remains missing or differs from its recorded baseline; a safely reconciled target can be retried, and a successful update clears the recovery marker for its selected targets. Independent artifacts in the approved batch are rolled back where possible and reported individually.
 
 ## Restore from a committed manifest
 
@@ -185,4 +186,4 @@ The checker accepts the shared schema-1 contract for explicit adoption. Existing
 - Repeating an unchanged installation is a no-op, including no manifest rewrite.
 - Installation refuses a managed skill whose files have changed; `check` reports `LOCAL_DIVERGENCE` and `diff` shows the changes without repairing them.
 - Local source paths are accepted only when their Git repository has a credential-free portable `origin` URL; that URL is what the manifest records.
-- Global installation and background synchronization are out of scope.
+- Global installation and background synchronization are out of scope. Managed removal is supported; update recovery is explicit and reported by the CLI.
