@@ -235,10 +235,10 @@ class SkillInstallationTests(unittest.TestCase):
         return code, output.getvalue() + errors.getvalue()
 
     @staticmethod
-    def write_existing_skill(path, text="Canonical fixture.\n", resource=b"resource\x00"):
+    def write_existing_skill(path, text="Canonical fixture.\n", resource=b"resource\x00", skill_name="guide"):
         path.mkdir(parents=True)
         (path / "SKILL.md").write_text(
-            "---\nname: guide\ndescription: Fixture installer skill.\n---\n" + text, encoding="utf-8")
+            f"---\nname: {skill_name}\ndescription: Fixture installer skill.\n---\n" + text, encoding="utf-8")
         (path / "references").mkdir()
         (path / "references/data.bin").write_bytes(resource)
 
@@ -516,6 +516,52 @@ class SkillInstallationTests(unittest.TestCase):
         after = self.project_file_snapshot()
         for path, content in before.items():
             self.assertEqual(after[path], content)
+
+    def test_explicit_local_name_mapping_reloads_and_accepts_later_target(self):
+        first = self.project / ".agents/skills/local-name"
+        second = self.project / ".claude/skills/local-name"
+        self.write_existing_skill(first, "Local version.\n", b"local\x00bytes", skill_name="local-name")
+        import shutil
+        shutil.copytree(first, second)
+        before = self.project_file_snapshot()
+
+        mapping = ".agents/skills/local-name=skills/guide"
+        code, output = self.run_adopt((mapping,), "INSTALL\n")
+        self.assertEqual(code, 0, output)
+        manifest_path = self.project / ".setupsmith/manifest.json"
+        manifest = SETUPSMITH.load_manifest(manifest_path)
+        entry = manifest["artifacts"][0]
+        self.assertEqual(entry["id"], "skills/guide")
+        self.assertEqual(entry["targets"][0]["path"], ".agents/skills/local-name")
+        self.assertEqual(entry["baseline_state"], "unknown")
+
+        code, output = self.run_adopt((".claude/skills/local-name=skills/guide",), "INSTALL\n")
+        self.assertEqual(code, 0, output)
+        updated = SETUPSMITH.load_manifest(manifest_path)["artifacts"][0]
+        self.assertEqual({target["path"] for target in updated["targets"]},
+                         {".agents/skills/local-name", ".claude/skills/local-name"})
+        self.assertEqual(updated["id"], "skills/guide")
+        after = self.project_file_snapshot()
+        for path, content in before.items():
+            self.assertEqual(after[path], content, path)
+
+        adopted_bytes = {path: content for path, content in after.items()
+                         if path.startswith((".agents/skills/local-name/", ".claude/skills/local-name/"))}
+        code, output = self.run_install("INSTALL\n", skills=("extra",), assistants=("codex",))
+        self.assertEqual(code, 0, output)
+        installed_manifest = SETUPSMITH.load_manifest(manifest_path)
+        self.assertEqual({entry["id"] for entry in installed_manifest["artifacts"]},
+                         {"skills/guide", "skills/extra"})
+        installed_project = self.project_file_snapshot()
+        for path, content in adopted_bytes.items():
+            self.assertEqual(installed_project[path], content, path)
+
+    def test_adopt_rejects_unsafe_local_basename(self):
+        self.write_existing_skill(self.project / ".agents/skills/guide")
+        code, output = self.run_adopt((".agents/skills/local name=skills/guide",), "INSTALL\n")
+        self.assertEqual(code, 2)
+        self.assertIn("unsafe or invalid adoption mapping", output)
+        self.assertFalse((self.project / ".setupsmith/manifest.json").exists())
 
     def test_installer_cannot_replace_or_reclassify_unknown_baseline(self):
         destination = self.project / ".agents/skills/guide"

@@ -2,6 +2,7 @@
 """Discover catalog artifacts and install explicitly selected skills from Git sources."""
 
 import argparse
+import copy
 import hashlib
 import json
 import os
@@ -355,9 +356,18 @@ def load_manifest(path: Path) -> dict:
             expected_prefix = {"codex": ".agents/skills", "claude-code": ".claude/skills",
                                "codex-legacy": ".codex/skills", "legacy": ".ai/skills"}.get(assistant)
             target_path = PurePosixPath(relative_path)
-            if (not expected_prefix or target_path.is_absolute() or ".." in target_path.parts or "\\" in relative_path
-                    or target_path.as_posix() != f"{expected_prefix}/{entry['id'].split('/', 1)[1]}"
-                    or target.get("state") != "installed"):
+            basename = target_path.name
+            expected_path = f"{expected_prefix}/{entry['id'].split('/', 1)[1]}" if expected_prefix else None
+            safe_relative_path = bool(expected_prefix) and (
+                not target_path.is_absolute()
+                and target_path.as_posix() == relative_path
+                and len(target_path.parts) == 3
+                and target_path.parts[:2] == tuple(expected_prefix.split("/"))
+            )
+            safe_basename = bool(re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", basename)) and not basename.endswith(".")
+            if (not expected_prefix or not safe_relative_path or not safe_basename
+                    or target.get("state") != "installed"
+                    or (target_adoption == "installed" and relative_path != expected_path)):
                 raise InstallError(f"manifest artifact {entry['id']} contains an unsafe target")
             if relative_path in owned_paths:
                 raise InstallError(f"manifest contains duplicate target ownership: {relative_path}")
@@ -402,10 +412,13 @@ def parse_mapping(value: str) -> tuple[str, str]:
     if "=" not in value:
         raise InstallError("each --map must be EXISTING_RELATIVE_PATH=skills/canonical-name")
     path, artifact_id = value.split("=", 1)
+    original_path = path
     path = PurePosixPath(path)
-    if (path.is_absolute() or ".." in path.parts or "\\" in value or
-            str(path) not in {f"{prefix}/{path.name}" for prefix in
-                              (".agents/skills", ".claude/skills", ".codex/skills", ".ai/skills")} or
+    basename = path.name
+    if (path.is_absolute() or ".." in path.parts or "\\" in value or path.as_posix() != original_path
+            or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", basename) or basename.endswith(".")
+            or str(path) not in {f"{prefix}/{basename}" for prefix in
+                                 (".agents/skills", ".claude/skills", ".codex/skills", ".ai/skills")} or
             not re.fullmatch(r"skills/[a-z0-9]+(?:-[a-z0-9]+)*", artifact_id)):
         raise InstallError(f"unsafe or invalid adoption mapping: {value}")
     return path.as_posix(), artifact_id
@@ -480,7 +493,9 @@ def adopt(args: argparse.Namespace) -> int:
         if len(set(mapped_paths)) != len(mapped_paths):
             reject_conflict("duplicate existing paths in adoption mappings")
         records = []
-        proposed = {entry["id"]: dict(entry) for entry in manifest["artifacts"]}
+        # Keep the loaded snapshot unchanged for stale-preview comparison. In
+        # particular, targets are nested mutable lists that planning may extend.
+        proposed = {entry["id"]: copy.deepcopy(entry) for entry in manifest["artifacts"]}
         for path, artifact_id in mappings:
             candidate = by_path.get(path)
             if candidate is None:
