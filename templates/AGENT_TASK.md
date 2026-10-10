@@ -17,11 +17,11 @@
 
 <Constraints or decisions that apply only to this task.>
 
-## Verification
+## Verification (optional)
 
 <Observable checks or evidence that show the outcome is complete. If a check cannot be run, report that and why.>
 
-## Delivery
+## Delivery (optional)
 
 <What to return: for example, a concise summary, changed files, verification results, and remaining limitations.>
 
