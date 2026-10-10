@@ -51,9 +51,16 @@ SetupSmith adds **guided adoption and deterministic lifecycle management** to th
 1. A user installs **only** `setup-ai` with a supported skills distribution mechanism and invokes it as `$setup-ai` or selects it from `/skills` in Codex, or invokes `/setup-ai` in Claude Code. The initial setup must work without any other SetupSmith catalog skill or SetupSmith CLI already installed.
 2. The skill inspects existing project instructions (`AGENTS.md`, `CLAUDE.md` and related configuration), technology and repository metadata, relevant architecture/product docs, Git conventions, and the SetupSmith catalog. It reads selectively, not by indiscriminately loading the whole codebase.
 3. For an empty repository, it recommends only minimal immediately useful configuration. For an existing repository, it prioritizes understanding and preserving what is already there.
+   - With only an idea and unresolved requirements, use discovery when useful before recommending stack-specific configuration; do not invent a product or technical direction.
+   - For a defined product with no implementation, bootstrap recommendations stay minimal and evidence-based, and proposed files are reviewed before adoption.
+   - An empty or minimal Git repository can receive read-only analysis based on available evidence; no source code or requirements are fabricated.
+   - A folder without a Git working tree can receive discussion and read-only advice, but it has no managed installation or manifest. Git initialization is a separate approved action.
+   - For an existing codebase and AI configuration, inspect project instructions first and preserve project-owned behavior during adoption or audit.
 4. The skill reuses `ai-config-builder` (bootstrap/adopt) and `audit-ai-config` rather than duplicating those workflows: it **loads their canonical instructions as needed**, through the user's accessible source checkout or source retrieval, instead of assuming those skills were installed during bootstrap.
 5. If the CLI is not available, initial read-only analysis and recommendations can still proceed. Before managed installation, the skill offers a verified CLI installation method and asks approval; it must not invent or silently execute an unverified installation command.
 6. If the canonical source cannot be reached and is not cached locally, it reports the missing information and cannot invent a complete or current recommendation set. It does not require changing the canonical catalog's directory structure or putting credentials in the project.
+
+Workflow choice is independent of execution environment. Existing procedures can be used in ChatGPT or a coding agent when their instructions and required tools are available; client tool access and invocation syntax can differ. Canonical project documents, specifications, and issues hold durable decisions and implementation requirements. ChatGPT Projects can support multi-chat discussion, while coding agents use accessible repository context. SetupSmith provides no automatic cross-assistant memory or synchronization. Use the existing `handoff` procedure when an explicit transfer is needed.
 
 ### 2. Recommend and select
 

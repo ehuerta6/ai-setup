@@ -9,8 +9,9 @@ These routes are suggestions, not a required sequence. Use only the steps that h
 | If you're... | Go to |
 | --- | --- |
 | Starting with an idea | [Only an idea](#only-an-idea) |
-| Planning a product that has not started | [Product defined, project not started](#product-defined-project-not-started) |
-| Setting up AI in an empty repo | [Empty repo needs minimal AI setup](#empty-repo-needs-minimal-ai-setup) |
+| Planning a defined product that has not started | [Product defined, project not started](#product-defined-project-not-started) |
+| Setting up AI in an empty Git repo | [Empty repo needs minimal AI setup](#empty-repo-needs-minimal-ai-setup) |
+| Working in a folder without a Git repo | [Folder without a Git repository](#project-starting-states) |
 | Adopting configuration into an existing project | [Existing project adoption](#existing-project-adoption) |
 | Reviewing configuration that's already in use | [Existing project maintenance](#existing-project-maintenance) |
 | Creating a multi-chat workspace | [New ChatGPT or Claude Project](#new-chatgpt-or-claude-project) |
@@ -28,6 +29,18 @@ These routes are suggestions, not a required sequence. Use only the steps that h
 | Listing catalog artifacts from a Git source | [Catalog discovery](#catalog-discovery) |
 | Analyzing a project for relevant configuration | [Guided analysis](#guided-analysis) |
 | Improving an existing workflow | [Workflow improvement](#workflow-improvement) |
+
+## Project starting states
+
+Choose a route from the project's actual state. These are examples, not required pipelines.
+
+| Starting state | Useful guidance |
+| --- | --- |
+| Idea only; product or technical requirements are unresolved | Use `grill-me` when discovery would help. Write a `to-spec` specification after decisions are resolved. Do not pick a stack or architecture without evidence. |
+| Product defined; implementation has not started | Use `ai-config-builder bootstrap` for only the configuration supported by current requirements. Review proposed files before adopting them; do not invent a stack, architecture, or dependencies. |
+| Empty or minimal Git repository | `setup-ai` can inspect the available files and give read-only, evidence-based recommendations. Keep them minimal; do not make up requirements or create implementation. |
+| Folder or idea without a Git repository | Discussion and read-only advice can still help. There is no managed installation or manifest yet. Treat Git initialization as a separate action that requires approval. |
+| Existing codebase and AI configuration | Inspect project instructions and sources of truth first. Use `ai-config-builder adopt` or `audit-ai-config` as appropriate, and preserve existing project-owned configuration. |
 
 ## Only an idea
 
@@ -293,8 +306,26 @@ The source's advertised default branch is used when `--ref` is omitted. Pass `--
 
 ## Guided analysis
 
-Install only the `setup-ai` skill from `skills/setup-ai/`. Invoke it with `$setup-ai` or select it through `/skills` in Codex, and use `/setup-ai` in Claude Code. These are client-specific native invocation forms; Codex does not provide a `/setup-ai` slash command. The skill can analyze and recommend read-only when the CLI is absent. When a verified CLI checkout is available, it can preview selected skill installation, run read-only checks and diffs, and guide explicitly approved selective updates through the CLI. Restoration and removal are available as explicit CLI operations. Rules, agents, templates, and Project Instructions remain reference-only. If interactive CLI confirmation cannot be surfaced, give the user the exact reviewed command to run in a terminal. Never treat a recommendation as authorization or run synchronization in the background.
+Install only the `setup-ai` skill from `skills/setup-ai/`. Invoke it with `$setup-ai` or select it through `/skills` in Codex, and use `/setup-ai` in Claude Code. These are client-specific native invocation forms; Codex does not provide a `/setup-ai` slash command.
 
+The skill can analyze and recommend read-only when the CLI is absent. When a verified CLI checkout is available, it can preview selected skill installation, run read-only checks and diffs, and guide explicitly approved selective updates through the CLI. Restoration and removal are available as explicit CLI operations. Rules, agents, templates, and Project Instructions remain reference-only. If interactive CLI confirmation cannot be surfaced, give the user the exact reviewed command to run in a terminal. Never treat a recommendation as authorization or run synchronization in the background.
+
+## Workflow and execution environment
+
+A workflow is the procedure for a task; the execution environment is where you use it. Procedures such as `grill-me`, `to-spec`, `to-issues`, `plan-issue-batches`, `implement-issue`, and `review-pr` can be used in ChatGPT or a coding agent when their instructions and necessary tools are available. Tool access, skill installation, and invocation syntax can differ by client.
+
+ChatGPT can help with discussion and exploration. Coding agents can help when repository inspection, file changes, or executable verification matter. These are options, not routing rules: ideation does not require ChatGPT, and writing a specification does not require Codex.
+
+Keep approved decisions in canonical project documents and implementation requirements in specifications or issues. ChatGPT Projects can support discussion across chats; coding agents use the project context they can access. There is no automatic memory or synchronization between assistants. Use `handoff` when an explicit transfer is useful.
+
+Examples, depending on the work:
+
+- Idea → `grill-me` → `to-spec` after decisions settle → implementation when ready.
+- Existing project → inspect instructions and configuration → selectively use `ai-config-builder adopt` or `audit-ai-config`.
+- Approved specification → `to-issues` → `implement-issue`.
+- Existing configuration → `audit-ai-config` → selectively update only reviewed items.
+
+An existing approved specification needs no new discovery unless meaningful ambiguity remains. Skill installation and issue planning are separate choices.
 
 ## Durable decision
 
