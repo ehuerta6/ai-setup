@@ -262,3 +262,42 @@ python3 -m unittest discover -s tests -v
 python3 scripts/validate_catalog.py
 git diff --check
 ```
+
+
+## Validation addendum — 2026-10-10
+
+This addendum records later user-observed Codex evidence without changing the historical results above. The original validation used SetupSmith base `1a09dd426cba92745a6eaa3a07e67aef2d20e657` and Codex CLI `0.160.0`; PR #43 subsequently merged the remote-first retrieval changes at `af3a6466400fbacdacc4bbebd0ffbc439d97bc53`.
+
+### Earlier Codex results
+
+- The earlier Codex CLI `0.160.0` discovery diagnostic passed, but its separate model-backed invocation could not reach the model endpoint. This remains the historical result in Phase D.
+- A later user-observed Codex CLI `0.160.0` invocation analyzed CappyHub but could not retrieve the catalog because GitHub DNS/network access was denied in that command sandbox. Recommendations that depended on the catalog were correctly withheld. The report in #43 was merged to address the remote-first retrieval guidance; this failure is not retroactively recorded as a pass.
+
+### Later real Codex invocation
+
+The user reports that on 2026-10-10, Codex CLI `0.162.1` successfully ran `$setup-ai` in CappyHub using the SetupSmith revision above. This is user-provided session evidence, not an independently reproduced run.
+
+- Codex inspected the actual CappyHub project, retrieved SetupSmith remotely, and resolved `main` to the immutable commit `af3a6466400fbacdacc4bbebd0ffbc439d97bc53`.
+- It used a disposable temporary checkout, read the README, registry, relevant procedures, and catalog entries at the pinned revision, then removed the checkout.
+- It generated ADD / KEEP EXISTING / REPLACE / SKIP recommendations in a read-only analysis. CappyHub was not modified and no managed install was attempted.
+- The session took 2 minutes 33 seconds and produced more than 20 recommendation rows. The user observed some `git show` errors for catalog paths that exist at the pinned revision. These UX and fidelity observations are recorded without inferring a cause; no independent reproduction established why those commands failed.
+- This observation demonstrates a successful model-backed invocation and remote canonical catalog retrieval after the earlier failures. It does not repeat or replace the managed CLI lifecycle evidence in the original report.
+
+### Claude Code availability
+
+Claude Code was unavailable in the validation environment (`claude --version` returned command not found). It was not installed. Native skill discovery and `/setup-ai` invocation therefore remain **BLOCKED / UNAVAILABLE**; placement under `.claude/skills/` in the earlier CLI fixture is only file lifecycle evidence, not native discovery.
+
+### Updated Issue #19 acceptance status
+
+The six criteria below correspond to the issue's acceptance criteria. Status incorporates the original report and the later Codex observation.
+
+| Issue #19 criterion | Status | Current evidence |
+| --- | --- | --- |
+| Analyze both projects from setup-ai-only bootstrap; produce different, relevant recommendations while preserving existing configuration | PASS | Original disposable-project analysis; later user-observed CappyHub read-only recommendations at the pinned canonical revision |
+| Install/adopt in both projects and selectively apply a real upstream skill change | PASS | Original disposable CLI lifecycle evidence, revisions A–C, manifests, and hashes |
+| Cover local edits, unknown baselines, conflicts/stale plans, removal, missing files, and offline/source reporting | PASS | Original manual clone and automated fixture evidence |
+| Cover multi-target recovery and fresh-clone manifest reconstruction, including unavailable pins and unsupported targets | PASS | Original recovery tests and separate clone restore evidence |
+| Verify actual native discovery for both Codex and Claude Code | BLOCKED / UNAVAILABLE | Codex discovery and successful invocation are evidenced; Claude Code runtime was unavailable |
+| Run catalog validation and configured CLI checks with reproducible results | PASS | Original report records 99 passing unit tests, catalog validation, and diff check at that validation time |
+
+The later Codex observation strengthens the first criterion and confirms remote retrieval/read-only recommendation behavior for CappyHub. It does not clear the Claude Code portion of the native-discovery criterion. Issue #19 remains open, and the post-MVP dependency gate remains unsatisfied until the outstanding acceptance criterion is resolved and reviewed/integrated.
