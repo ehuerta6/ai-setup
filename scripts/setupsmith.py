@@ -765,16 +765,22 @@ def load_check_manifest(path: Path) -> dict:
             prefix = prefixes.get(target["assistant"])
             basename = target_path.name
             safe_basename = bool(re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", basename)) and not basename.endswith(".")
-            safe_layout = bool(prefix) and (
+            safe_relative_path = (
                 not target_path.is_absolute()
                 and target_path.as_posix() == target["path"]
-                and len(target_path.parts) == 3
+                and target_path.parts
+                and ".." not in target_path.parts
+                and "\\" not in target["path"]
+                and not any(ord(character) < 32 for character in target["path"])
+            )
+            safe_layout = safe_relative_path and (not prefix or (
+                len(target_path.parts) == 3
                 and target_path.parts[:2] == tuple(prefix.split("/"))
                 and safe_basename
-            )
+            ))
             canonical_path = f"{prefix}/{artifact_name}" if prefix else None
             if (not safe_layout
-                    or (target_adoption == "installed" and target["path"] != canonical_path)):
+                    or (prefix and target_adoption == "installed" and target["path"] != canonical_path)):
                 raise CheckError(f"manifest artifact {entry['id']} maps to a conflicting target path")
             if target["path"] in seen_paths:
                 raise CheckError(f"manifest contains conflicting target ownership: {target['path']}")
