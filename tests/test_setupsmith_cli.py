@@ -14,8 +14,8 @@ class CatalogDiscoveryTests(unittest.TestCase):
         self.root = Path(self.temporary.name) / "catalog"
         self.root.mkdir()
         (self.root / "registry.yaml").write_text(
-            "version: 0.1.0\nskills:\n  guide:\n    status: testing\n"
-            "agents:\n  helper:\n    status: accepted\n",
+            "version: 0.1.0\nskills:\n  guide:\n    status: testing # active\n"
+            "agents:\n  helper:\n    status: 'accepted' # reviewed\n",
             encoding="utf-8",
         )
         (self.root / "skills" / "guide" / "references").mkdir(parents=True)

@@ -14,6 +14,26 @@ class DiscoveryError(Exception):
     pass
 
 
+def scalar_without_yaml_comment(value: str) -> str:
+    """Remove a YAML comment without treating a # inside quotes as a comment."""
+    quote = None
+    escaped = False
+    for index, character in enumerate(value):
+        if escaped:
+            escaped = False
+            continue
+        if character == "\\" and quote == '"':
+            escaped = True
+            continue
+        if quote and character == quote:
+            quote = None
+        elif not quote and character in {"'", '"'}:
+            quote = character
+        elif not quote and character == "#" and (index == 0 or value[index - 1].isspace()):
+            return value[:index].rstrip()
+    return value.strip()
+
+
 def git(*args: str, cwd: Path | None = None) -> str:
     result = subprocess.run(["git", *args], cwd=cwd, text=True, capture_output=True)
     if result.returncode:
@@ -76,7 +96,7 @@ def parse_registry(path: Path) -> tuple[dict[tuple[str, str], str], list[str]]:
             continue
         if field and artifact:
             if field.group(1) == "status":
-                value = field.group(2).strip("\"'")
+                value = scalar_without_yaml_comment(field.group(2)).strip("\"'")
                 if value not in valid:
                     issues.append(f"registry.yaml:{number}: invalid status {value!r} for {section}.{artifact}")
                 else:
