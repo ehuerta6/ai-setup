@@ -2,7 +2,7 @@
 
 A reusable catalog of skills, agents, rules, templates, and Project Instructions, with a planned guided setup and safe synchronization workflow for AI coding assistants.
 
-**Available now:** the configuration catalog and manual adoption workflows below. **In design, not yet implemented:** the `/setup-ai` onboarding skill and SetupSmith CLI for Analyze → Recommend → Install → Sync. See [the MVP specification](docs/setupsmith-mvp.md).
+**Available now:** the configuration catalog, manual adoption workflows, and a read-only CLI catalog discovery command. The standalone `setup-ai` analysis skill and managed Install → Sync workflow are not implemented yet. See [the MVP specification](docs/setupsmith-mvp.md).
 
 Browse this README to find configuration. Use [WORKFLOWS.md](WORKFLOWS.md) to choose a process for a specific task.
 
@@ -13,6 +13,7 @@ Projects can adopt only what they need. Keep product behavior, architecture, and
 - **Choose a workflow:** start with the scenario router in [WORKFLOWS.md](WORKFLOWS.md), then load the relevant skills.
 - **Adopt configuration into a project today:** inspect its AI instructions, architecture, stack, Git workflow, and conventions. Then follow the manual Project adoption route in [WORKFLOWS.md](WORKFLOWS.md) and copy only the selected canonical files. For example, add `skills/firebase/SKILL.md` only to a project that uses Firebase, and keep product-specific instructions there.
 - **Set up a multi-chat workspace:** choose a Project Instructions preset below and tailor it with `skills/ai-config-builder/SKILL.md`.
+- **Discover catalog artifacts:** run `python3 scripts/setupsmith.py discover --source https://github.com/ehuerta6/setupsmith.git`. It defaults to the Git source's advertised default branch; use `--ref <branch-or-tag-or-revision>` to select another ref. This command is read-only with respect to the target project and reports its resolved commit.
 
 The catalog below lists each artifact's canonical path and purpose.
 
