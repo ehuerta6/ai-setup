@@ -1,9 +1,9 @@
 ---
-name: git-flow
+name: github-flow
 description: Execute Git and GitHub operations using the repository's documented conventions for commits, issues, pull requests, and merging.
 ---
 
-# Git and GitHub flow
+# GitHub flow
 
 Use this skill when performing Git or GitHub workflow operations.
 
@@ -11,7 +11,7 @@ The stable conventions live in `rules/github.md`.
 
 Read that file first.
 
-Project-specific Git instructions override the global rule. Follow each repository’s configured workflow; the name of this skill does not prescribe the traditional Git Flow branching model.
+Project-specific Git instructions override the global rule.
 
 ## Process
 

@@ -1,4 +1,4 @@
-# General Workspace
+# Project Base
 
 Use this as the starting point for a long-running multi-chat AI Project when no more specific preset exists. A project can be a software effort, a personal goal, an ongoing research question, or a learning plan. For example, use it to carry confirmed goals, sources, decisions, and next steps across chats while keeping personal details in the Project itself.
 

@@ -1,12 +1,12 @@
 # Research Workspace
 
-Use this preset for a long-running research project with multiple related chats. Start from `general-workspace` and retain its general project, scope, and continuity guidance; customize this preset to the actual research question and available sources.
+Use this preset for a long-running research project with multiple related chats. Start from `project-base` and retain its general project, scope, and continuity guidance; customize this preset to the actual research question and available sources.
 
 ## Research purpose and sources
 
 Keep the current research question, scope, and intended use clear. Treat shared project files and explicit user decisions as the durable context. Maintain a source index when useful, including source title or link, author or publisher, date, access or review date, and the claims it supports. Check freshness when evidence may change.
 
-Use `research-and-compare` for structured comparisons. Add only research-specific guidance needed for this project; do not restate generic research rules from `general-workspace`.
+Use `research-and-compare` for structured comparisons. Add only research-specific guidance needed for this project; do not restate generic research rules from `project-base`.
 
 ## Multiple chats and continuity
 

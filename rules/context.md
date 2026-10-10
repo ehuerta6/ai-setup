@@ -14,7 +14,7 @@ When a project does not define one, prefer:
 2. project-specific instructions;
 3. approved specs, designs, and decision records;
 4. the active GitHub Issue and its accepted clarifications;
-5. global rules from SetupSmith;
+5. global rules from `ai-setup`;
 6. applicable skills;
 7. existing code patterns as implementation evidence.
 

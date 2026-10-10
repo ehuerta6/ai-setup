@@ -1,8 +1,6 @@
-# SetupSmith
+# AI Setup
 
-A reusable catalog of skills, agents, rules, templates, and Project Instructions, with guided setup and deterministic project-local skill installation for AI coding assistants.
-
-**Available now:** the configuration catalog, manual adoption workflows, read-only CLI catalog discovery and managed-skill checks/diffs, explicitly approved selective skill installation, adoption, updates, restoration, and removal, and `setup-ai` guided Analyze → Recommend → Install → on-demand Sync through the CLI. Analysis and recommendations remain read-only without the CLI. Sync runs only on request, and every managed write requires the CLI's interactive approval. Background synchronization is not implemented. See the [MVP specification](docs/setupsmith-mvp.md) and [managed installation guide](docs/managed-skill-installation.md).
+Reusable configuration for AI-assisted software engineering, with selected workflows for research, writing, learning, and multi-chat workspaces.
 
 Browse this README to find configuration. Use [WORKFLOWS.md](WORKFLOWS.md) to choose a process for a specific task.
 
@@ -11,12 +9,8 @@ Projects can adopt only what they need. Keep product behavior, architecture, and
 ## Quick start
 
 - **Choose a workflow:** start with the scenario router in [WORKFLOWS.md](WORKFLOWS.md), then load the relevant skills.
-- **Adopt configuration into a project today:** inspect its AI instructions, architecture, stack, Git workflow, and conventions. Then follow the manual Project adoption route in [WORKFLOWS.md](WORKFLOWS.md) and copy only the selected canonical files. For example, add `skills/firebase/SKILL.md` only to a project that uses Firebase, and keep product-specific instructions there.
+- **Adopt configuration into a project:** inspect its AI instructions, architecture, stack, Git workflow, and conventions. Then follow the Project adoption route in [WORKFLOWS.md](WORKFLOWS.md) and copy only the selected canonical files. For example, add `skills/firebase/SKILL.md` only to a project that uses Firebase, and keep product-specific instructions there.
 - **Set up a multi-chat workspace:** choose a Project Instructions preset below and tailor it with `skills/ai-config-builder/SKILL.md`.
-- **Discover catalog artifacts:** run `python3 scripts/setupsmith.py discover --source https://github.com/ehuerta6/setupsmith.git`. It defaults to the Git source's advertised default branch; use `--ref <branch-or-tag-or-revision>` to select another ref. This command is read-only with respect to the target project and reports its resolved commit.
-- **Analyze a project:** install only `skills/setup-ai/SKILL.md` using your assistant's supported skill mechanism, then invoke it as `$setup-ai` or select it from `/skills` in Codex, or as `/setup-ai` in Claude Code. Analysis and recommendations remain read-only and work without a preinstalled CLI. When a verified CLI checkout is available, the skill can preview selected skill installation and guide on-demand check, diff, and explicitly approved updates through the CLI. Restore and remove are explicit CLI operations. Codex native discovery is verified; the latest separate model-backed invocation attempt could not reach its model endpoint. Claude Code is not installed in the current environment, so its native runtime remains unverified.
-
-If a coding assistant's sandbox blocks GitHub DNS or network access during `setup-ai` analysis, the skill should request permission for **read-only remote source access** or use an already-connected repository read tool that can pin files to a verified commit. A separate local SetupSmith clone is **not required** for guided analysis. Without any authorized remote source, catalog recommendations must remain blocked rather than guessed. See [setup-ai](skills/setup-ai/SKILL.md) for the trust and permission boundaries.
 
 The catalog below lists each artifact's canonical path and purpose.
 
@@ -34,17 +28,11 @@ Use the smallest artifact that fits the job:
 
 You do not need to adopt the whole catalog. In an existing repository, inspect its own instructions first, then copy only the relevant canonical files and keep product and architecture decisions in that repository. For example, a Firebase project might adopt `skills/firebase/SKILL.md` and `rules/security.md`, while leaving unrelated skills behind.
 
-The catalog also supports nontechnical work. Use [research-and-compare](skills/research-and-compare/SKILL.md) for a focused comparison, [learning-coach](project-instructions/learning-coach.md) for a multi-chat learning workspace, or [general-workspace](project-instructions/general-workspace.md) when a workspace needs continuity across chats. Skills guide tasks; Project Instructions hold durable context. Keep personal details and decisions in the project workspace.
+The catalog also supports nontechnical work. Use [research-and-compare](skills/research-and-compare/SKILL.md) for a focused comparison, [learning-coach](project-instructions/learning-coach.md) for a multi-chat learning workspace, or [project-base](project-instructions/project-base.md) for personal planning that needs continuity across chats. Skills guide a task; Project Instructions hold durable workspace context. The project workspace, not this reusable catalog, should contain personal details and decisions.
 
 # Skills
 
 ## Configuration
-
-### `setup-ai`
-
-Path: `skills/setup-ai/SKILL.md`
-
-Analyze project conventions and recommend catalog configuration without modifying project files.
 
 ### `ai-config-builder`
 
@@ -52,9 +40,9 @@ Path: `skills/ai-config-builder/SKILL.md`
 
 Design or evolve skills, agents, rules, templates, and Project Instructions without unnecessary duplication.
 
-### `audit-ai-config`
+### `project-audit`
 
-Path: `skills/audit-ai-config/SKILL.md`
+Path: `skills/project-audit/SKILL.md`
 
 Audit existing project AI configuration for drift, duplication, stale instructions, and missing reusable configuration.
 
@@ -124,21 +112,21 @@ Path: `skills/debug-with-evidence/SKILL.md`
 
 Debug using reproduction, evidence, explicit hypotheses, and focused tests instead of random edits.
 
-### `git-flow`
+### `github-flow`
 
-Path: `skills/git-flow/SKILL.md`
+Path: `skills/github-flow/SKILL.md`
 
 Execute the repository's Git and GitHub workflow for branches, commits, issues, PRs, and merging.
 
 Project-specific Git rules override its defaults.
 
-### `plan-issue-batches`
+### `issue-flow`
 
-Path: `skills/plan-issue-batches/SKILL.md`
+Path: `skills/issue-flow/SKILL.md`
 
 Plan existing GitHub Issues into dependency-aware batches, generate a prompt for a selected batch, and update the plan as repository state changes.
 
-Unlike `to-issues`, it does not create issues. Unlike the `issue-batch-orchestrator` agent, it prepares the plan and prompt rather than executing the batch.
+Unlike `to-issues`, it does not create issues. Unlike the `batch-orchestrator` agent, it prepares the plan and prompt rather than executing the batch.
 
 ## Stack-specific
 
@@ -164,9 +152,9 @@ Path: `skills/retro/SKILL.md`
 
 Evaluate completed AI-assisted work and identify improvements to skills, rules, tooling, or workflow.
 
-### `write-agent-instructions`
+### `writing-for-agents`
 
-Path: `skills/write-agent-instructions/SKILL.md`
+Path: `skills/writing-for-agents/SKILL.md`
 
 Write and maintain compact instructions intended for AI agents.
 
@@ -216,9 +204,9 @@ Independent reviewer for completed implementation work.
 
 Use before merge when a separate review perspective is useful.
 
-## `engineering-mentor`
+## `mentor`
 
-Path: `agents/engineering-mentor.md`
+Path: `agents/mentor.md`
 
 Explains engineering concepts and implementation decisions while helping with a task.
 
@@ -232,9 +220,9 @@ Review Supabase and PostgreSQL schema changes, migrations, RLS, authorization, a
 
 Only use for projects where Supabase or PostgreSQL database review is relevant.
 
-## `issue-batch-orchestrator`
+## `batch-orchestrator`
 
-Path: `agents/issue-batch-orchestrator.md`
+Path: `agents/batch-orchestrator.md`
 
 Execute an approved multi-issue execution plan.
 
@@ -346,20 +334,6 @@ Path: `templates/BATCH.md`
 
 Persist an issue orchestration graph, execution waves, gates, and orchestrator prompt.
 
-## `AGENT_TASK`
-
-Path: `templates/AGENT_TASK.md`
-
-Shape a task for delegated work that may need tools, repository access, changes, or verification. Use it when the agent needs a defined outcome, scope, evidence, or delivery report.
-
-## `CHAT_TASK`
-
-Path: `templates/CHAT_TASK.md`
-
-Shape a conversational request for research, writing, analysis, or similar work. Tools may still be used when useful.
-
-Use neither when a direct request is already clear and needs no reusable structure. Keep only sections that affect the task; remove unused optional sections rather than filling them with guesses. In every project, follow its instructions and sources of truth over reusable prompts.
-
 ## `DECISION`
 
 Path: `templates/DECISION.md`
@@ -372,9 +346,9 @@ Reusable presets for long-running ChatGPT Projects or other AI workspaces with m
 
 Project instructions define how an entire project behaves. Individual chats may have different purposes and should use only the relevant parts.
 
-## `resume-workspace`
+## `resume-reviews`
 
-Path: `project-instructions/resume-workspace.md`
+Path: `project-instructions/resume-reviews.md`
 
 For technical resume review, tailoring, Resume Bank usage, recruiter signal, and truthful positioning.
 
@@ -402,9 +376,9 @@ Path: `project-instructions/course-companion.md`
 
 For academic courses where syllabus, slides, assignments, and professor-provided material define the primary learning context.
 
-## `general-workspace`
+## `project-base`
 
-Path: `project-instructions/general-workspace.md`
+Path: `project-instructions/project-base.md`
 
 Universal starting point when no specialized Project Instruction preset fits.
 

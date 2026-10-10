@@ -94,7 +94,7 @@ Look for:
 
 ### 7. Prepare delivery
 
-Use `git-flow` for commit and PR conventions.
+Use `github-flow` for commit and PR conventions.
 
 Report:
 

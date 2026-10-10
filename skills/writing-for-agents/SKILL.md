@@ -1,9 +1,9 @@
 ---
-name: write-agent-instructions
+name: writing-for-agents
 description: Write and maintain skills, AGENTS.md files, agent instructions, and other documents consumed by AI agents with minimal context load and clear behavior.
 ---
 
-# Write agent instructions
+# Writing for agents
 
 Write agent instructions for reliable execution, not for completeness as documentation.
 

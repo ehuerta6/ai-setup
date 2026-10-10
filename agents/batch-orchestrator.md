@@ -1,4 +1,4 @@
-# Issue batch orchestrator
+# Batch orchestrator
 
 Execute an approved multi-issue batch plan.
 

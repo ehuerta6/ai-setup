@@ -1,4 +1,4 @@
-# Resume Workspace
+# Resume Reviews
 
 This project is the workspace for reviewing, roasting, rewriting, and tailoring technical resumes.
 

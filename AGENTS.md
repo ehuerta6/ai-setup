@@ -1,8 +1,6 @@
-# SetupSmith
+# AI Setup
 
-This repository is the canonical source for reusable AI-assisted software engineering configuration, with selected research, writing, learning, and multi-chat workflows. SetupSmith also plans guided per-project recommendation, installation, version tracking, and safe selective updates.
-
-For product-development work, read [docs/setupsmith-mvp.md](docs/setupsmith-mvp.md). The CLI supports read-only catalog discovery and managed-skill checks/diffs, plus explicitly approved selective installation, adoption, updates, restoration, and removal; see [docs/managed-skill-installation.md](docs/managed-skill-installation.md) for commands and limits. `setup-ai` guides Analyze → Recommend → Install → on-demand Sync through the CLI; analysis and recommendations can proceed read-only when the CLI is absent. Every managed write requires the CLI's interactive approval. Background synchronization is not implemented. Do not claim unavailable commands work. Catalog maintenance remains a separate, equally valid responsibility.
+This repository is the canonical source for reusable AI-assisted software engineering configuration, with selected workflows for research, writing, learning, and long-running AI workspaces.
 
 ## Context
 
@@ -49,6 +47,6 @@ Testing does not imply adoption.
 
 ## This repository
 
-`ehuerta6/setupsmith` is a personal configuration repository and currently permits direct work on `main`.
+`ai-setup` is a personal configuration repository and currently permits direct work on `main`.
 
 Do not apply that exception to other repositories unless they explicitly say so.
