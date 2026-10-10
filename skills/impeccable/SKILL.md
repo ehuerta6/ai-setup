@@ -199,6 +199,8 @@ A simple interface can still be deliberate.
 
 ### 9. Verify in bounded passes
 
+For UI tasks with explicit viewport, theme, or state requirements, plan the relevant checks before reviewing. Confirm the needed states are reachable with existing data or fixtures; use focused tests or isolated fixtures for gaps when justified. Record each requirement as visually inspected, automated, unavailable, or skipped. Automated checks do not replace visual inspection. Keep this proportional to the task.
+
 When implementation tools allow rendered inspection:
 
 1. build the complete intended change;
