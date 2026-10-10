@@ -171,14 +171,14 @@ implement-issue
 
 ## Several related issues
 
-Flow:
+Use `issue-flow` when GitHub Issues already exist and need dependency-aware sequencing.
 
-issue-batch-orchestrator
-→ batch-orchestrator
+- `issue-flow plan` or “Arma un flow” reviews relevant open issues and proposes execution batches.
+- `issue-flow orchestrate Batch 2` generates a current, copy-paste-ready prompt for a selected batch.
+- Use `to-issues` first when an approved spec still needs to be split into issues.
+- Give the generated prompt to a coding agent, or use `batch-orchestrator` when coordinated execution is useful and supported.
 
-The planning skill determines dependencies, waves, and gates.
-
-The agent executes the approved plan and coordinates implementation and independent review.
+Planning and prompt generation do not change issue state or start implementation. This workflow is optional; skip steps that do not add value.
 
 
 ## Bug
