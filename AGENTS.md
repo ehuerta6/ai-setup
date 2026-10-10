@@ -2,7 +2,7 @@
 
 This repository is the canonical source for reusable AI-assisted software engineering configuration, with selected research, writing, learning, and multi-chat workflows. SetupSmith also plans guided per-project recommendation, installation, version tracking, and safe selective updates.
 
-For product-development work, read [docs/setupsmith-mvp.md](docs/setupsmith-mvp.md). The CLI supports read-only catalog discovery via `python3 scripts/setupsmith.py discover`, and the standalone `setup-ai` skill supports read-only Analyze → Recommend. Codex uses `$setup-ai` or `/skills`; Claude Code uses `/setup-ai`. Managed installation and synchronization are not implemented yet. Do not claim unavailable commands work. Catalog maintenance remains a separate, equally valid responsibility.
+For product-development work, read [docs/setupsmith-mvp.md](docs/setupsmith-mvp.md). The CLI supports read-only catalog discovery and explicitly approved, selective project-local skill installation; see [docs/managed-skill-installation.md](docs/managed-skill-installation.md) for actual commands and limits. The standalone `setup-ai` skill supports read-only Analyze → Recommend. Codex uses `$setup-ai` or `/skills`; Claude Code uses `/setup-ai`. Sync, existing-skill adoption, updates, and removal are not implemented. Do not claim unavailable commands work. Catalog maintenance remains a separate, equally valid responsibility.
 
 ## Context
 

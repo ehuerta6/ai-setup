@@ -1,8 +1,8 @@
 # SetupSmith
 
-A reusable catalog of skills, agents, rules, templates, and Project Instructions, with a planned guided setup and safe synchronization workflow for AI coding assistants.
+A reusable catalog of skills, agents, rules, templates, and Project Instructions, with guided setup and deterministic project-local skill installation for AI coding assistants.
 
-**Available now:** the configuration catalog, manual adoption workflows, the read-only CLI catalog discovery command, and the standalone `setup-ai` Analyze → Recommend skill. Managed installation and synchronization are not implemented yet. See [the MVP specification](docs/setupsmith-mvp.md).
+**Available now:** the configuration catalog, manual adoption workflows, read-only CLI catalog discovery, explicitly approved selective skill installation, and the standalone `setup-ai` Analyze → Recommend skill. Sync, existing-skill adoption, updates, and removal are not implemented. See the [MVP specification](docs/setupsmith-mvp.md) and [managed installation guide](docs/managed-skill-installation.md).
 
 Browse this README to find configuration. Use [WORKFLOWS.md](WORKFLOWS.md) to choose a process for a specific task.
 
