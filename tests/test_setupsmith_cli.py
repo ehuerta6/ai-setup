@@ -217,6 +217,10 @@ class SkillInstallationTests(unittest.TestCase):
             code = SETUPSMITH.main(arguments)
         return code, output.getvalue() + errors.getvalue()
 
+    def project_file_snapshot(self):
+        return {path.relative_to(self.project).as_posix(): path.read_bytes()
+                for path in self.project.rglob("*") if path.is_file()}
+
     def test_preview_decline_and_confirmed_install_preserve_full_tree(self):
         code, preview = self.run_install(preview=True)
         self.assertEqual(code, 0)
@@ -295,6 +299,53 @@ class SkillInstallationTests(unittest.TestCase):
         self.assertFalse((self.project / ".claude").exists())
         manifest = json.loads((self.project / ".setupsmith/manifest.json").read_text(encoding="utf-8"))
         self.assertEqual([target["assistant"] for target in manifest["artifacts"][0]["targets"]], ["codex"])
+
+    def test_additional_target_from_same_verified_revision_preserves_baseline(self):
+        code, output = self.run_install("INSTALL\n", assistants=("codex",))
+        self.assertEqual(code, 0, output)
+        manifest_path = self.project / ".setupsmith/manifest.json"
+        before = json.loads(manifest_path.read_text(encoding="utf-8"))["artifacts"][0]
+
+        code, output = self.run_install("INSTALL\n", assistants=("claude-code",))
+
+        self.assertEqual(code, 0, output)
+        after = json.loads(manifest_path.read_text(encoding="utf-8"))["artifacts"][0]
+        for field in ("source", "configured_ref", "revision", "content_digest", "files"):
+            self.assertEqual(after[field], before[field])
+        self.assertEqual({target["assistant"] for target in after["targets"]}, {"codex", "claude-code"})
+        self.assertEqual((self.project / ".agents/skills/guide/SKILL.md").read_bytes(),
+                         (self.project / ".claude/skills/guide/SKILL.md").read_bytes())
+
+    def test_additional_target_at_new_revision_is_rejected_without_changes(self):
+        code, output = self.run_install("INSTALL\n", assistants=("codex",))
+        self.assertEqual(code, 0, output)
+        before = self.project_file_snapshot()
+        (self.source / "skills/guide/SKILL.md").write_text(
+            "---\nname: guide\ndescription: Fixture installer skill.\n---\nRevision B.\n", encoding="utf-8")
+        self.git(self.source, "add", "skills/guide/SKILL.md")
+        self.git(self.source, "commit", "-qm", "revision B")
+
+        code, output = self.run_install("INSTALL\n", assistants=("claude-code",))
+
+        self.assertEqual(code, 2)
+        self.assertIn("provenance or verified content baseline", output)
+        self.assertIn("No project files changed", output)
+        self.assertEqual(self.project_file_snapshot(), before)
+        self.assertFalse((self.project / ".claude/skills/guide").exists())
+
+    def test_additional_target_from_different_git_source_is_rejected_without_changes(self):
+        code, output = self.run_install("INSTALL\n", assistants=("codex",))
+        self.assertEqual(code, 0, output)
+        before = self.project_file_snapshot()
+        self.git(self.source, "remote", "set-url", "origin", "https://example.invalid/other-catalog.git")
+
+        code, output = self.run_install("INSTALL\n", assistants=("claude-code",))
+
+        self.assertEqual(code, 2)
+        self.assertIn("provenance or verified content baseline", output)
+        self.assertIn("No project files changed", output)
+        self.assertEqual(self.project_file_snapshot(), before)
+        self.assertFalse((self.project / ".claude/skills/guide").exists())
 
     def test_modified_managed_files_are_refused(self):
         code, output = self.run_install("INSTALL\n")

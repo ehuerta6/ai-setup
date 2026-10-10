@@ -375,7 +375,8 @@ def render_preview(source: str, configured_ref: str, revision: str, plans: list[
                     rendered = f"[binary bytes, hex: {data.hex()}]"
                 lines.append(f"      content: {json.dumps(rendered, ensure_ascii=True)}")
     lines.append(f"Manifest: {Path('.setupsmith/manifest.json')}")
-    if any(state.startswith("conflict") for plan in plans for _, _, _, state in plan["destinations"]):
+    if any(plan.get("artifact_conflict") or state.startswith("conflict")
+           for plan in plans for _, _, _, state in plan["destinations"]):
         lines.append("Manifest: unchanged because the plan contains conflicts.")
     else:
         proposed_entries = []
@@ -433,6 +434,17 @@ def install(args: argparse.Namespace) -> int:
             skill_dir = source_root / "skills" / skill
             digest, hashes, files = tree_identity(skill_dir)
             existing_entry = next((entry for entry in manifest["artifacts"] if entry.get("id") == artifact_id), None)
+            artifact_conflict = None
+            if existing_entry and (
+                    existing_entry.get("source") != source_locator
+                    or existing_entry.get("configured_ref") != configured
+                    or existing_entry.get("revision") != revision
+                    or existing_entry.get("content_digest") != digest
+                    or existing_entry.get("files") != hashes):
+                artifact_conflict = (
+                    f"managed artifact provenance or verified content baseline does not match "
+                    f"the requested source revision: {artifact_id}")
+                conflicts.append(artifact_conflict)
             destinations = []
             for target in args.assistant:
                 prefix = ".agents/skills" if target == "codex" else ".claude/skills"
@@ -458,7 +470,8 @@ def install(args: argparse.Namespace) -> int:
                 destinations.append((target, relative, destination, state))
             plans.append({"skill": skill, "artifact_id": artifact_id, "skill_dir": skill_dir,
                           "digest": digest, "hashes": hashes, "files": files,
-                          "existing_entry": existing_entry, "destinations": destinations})
+                          "existing_entry": existing_entry, "artifact_conflict": artifact_conflict,
+                          "destinations": destinations})
         preview = render_preview(source_locator, configured, revision, plans,
                                  args.assistant, root, manifest_path, manifest)
         print(preview)
