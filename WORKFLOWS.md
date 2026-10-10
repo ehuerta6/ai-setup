@@ -1,6 +1,6 @@
 # Workflows
 
-Scenario-based guide for using the existing SetupSmith configuration catalog. The CLI currently supports read-only catalog discovery; `setup-ai` analysis and managed installation/synchronization are not implemented yet.
+Scenario-based guide for using the existing SetupSmith configuration catalog. The CLI supports read-only catalog discovery, and `setup-ai` supports read-only Analyze → Recommend. Managed installation and synchronization are not implemented yet.
 
 These routes are suggestions, not a required sequence. Use only the steps that help with the task. For a single reusable workflow, load its skill; for durable multi-chat context, start from a Project Instruction preset.
 
@@ -26,6 +26,7 @@ These routes are suggestions, not a required sequence. Use only the steps that h
 | Handing work to another chat or agent | [Continue work elsewhere](#continue-work-elsewhere) |
 | Creating reusable AI configuration | [Need new AI configuration](#need-new-ai-configuration) |
 | Listing catalog artifacts from a Git source | [Catalog discovery](#catalog-discovery) |
+| Analyzing a project for relevant configuration | [Guided analysis](#guided-analysis) |
 | Improving an existing workflow | [Workflow improvement](#workflow-improvement) |
 
 ## Only an idea
@@ -289,6 +290,10 @@ python3 scripts/setupsmith.py discover --source https://github.com/ehuerta6/setu
 ```
 
 The source's advertised default branch is used when `--ref` is omitted. Pass `--ref <branch-or-tag-or-revision>` to choose a specific Git ref. The JSON report includes the immutable resolved commit, source catalog status when registered, missing metadata, and any errors or warnings. Exit status 2 means discovery was incomplete or failed. Discovery does not install artifacts or write to the target project.
+
+## Guided analysis
+
+Install only the `setup-ai` skill from `skills/setup-ai/`. Invoke it with `$setup-ai` or select it through `/skills` in Codex, and use `/setup-ai` in Claude Code. These are client-specific native invocation forms; Codex does not provide a `/setup-ai` slash command. The skill analyzes and recommends without changing project files. Managed installation and synchronization are not available yet.
 
 
 ## Durable decision

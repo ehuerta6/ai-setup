@@ -48,7 +48,7 @@ SetupSmith adds **guided adoption and deterministic lifecycle management** to th
 
 ### 1. Bootstrap and analyze
 
-1. A user installs **only** `setup-ai` with a supported skills distribution mechanism and invokes `/setup-ai` in Codex or Claude Code. The initial setup must work without any other SetupSmith catalog skill or SetupSmith CLI already installed.
+1. A user installs **only** `setup-ai` with a supported skills distribution mechanism and invokes it as `$setup-ai` or selects it from `/skills` in Codex, or invokes `/setup-ai` in Claude Code. The initial setup must work without any other SetupSmith catalog skill or SetupSmith CLI already installed.
 2. The skill inspects existing project instructions (`AGENTS.md`, `CLAUDE.md` and related configuration), technology and repository metadata, relevant architecture/product docs, Git conventions, and the SetupSmith catalog. It reads selectively, not by indiscriminately loading the whole codebase.
 3. For an empty repository, it recommends only minimal immediately useful configuration. For an existing repository, it prioritizes understanding and preserving what is already there.
 4. The skill reuses `ai-config-builder` (bootstrap/adopt) and `audit-ai-config` rather than duplicating those workflows: it **loads their canonical instructions as needed**, through the user's accessible source checkout or source retrieval, instead of assuming those skills were installed during bootstrap.

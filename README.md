@@ -2,7 +2,7 @@
 
 A reusable catalog of skills, agents, rules, templates, and Project Instructions, with a planned guided setup and safe synchronization workflow for AI coding assistants.
 
-**Available now:** the configuration catalog, manual adoption workflows, and a read-only CLI catalog discovery command. The standalone `setup-ai` analysis skill and managed Install → Sync workflow are not implemented yet. See [the MVP specification](docs/setupsmith-mvp.md).
+**Available now:** the configuration catalog, manual adoption workflows, the read-only CLI catalog discovery command, and the standalone `setup-ai` Analyze → Recommend skill. Managed installation and synchronization are not implemented yet. See [the MVP specification](docs/setupsmith-mvp.md).
 
 Browse this README to find configuration. Use [WORKFLOWS.md](WORKFLOWS.md) to choose a process for a specific task.
 
@@ -14,6 +14,7 @@ Projects can adopt only what they need. Keep product behavior, architecture, and
 - **Adopt configuration into a project today:** inspect its AI instructions, architecture, stack, Git workflow, and conventions. Then follow the manual Project adoption route in [WORKFLOWS.md](WORKFLOWS.md) and copy only the selected canonical files. For example, add `skills/firebase/SKILL.md` only to a project that uses Firebase, and keep product-specific instructions there.
 - **Set up a multi-chat workspace:** choose a Project Instructions preset below and tailor it with `skills/ai-config-builder/SKILL.md`.
 - **Discover catalog artifacts:** run `python3 scripts/setupsmith.py discover --source https://github.com/ehuerta6/setupsmith.git`. It defaults to the Git source's advertised default branch; use `--ref <branch-or-tag-or-revision>` to select another ref. This command is read-only with respect to the target project and reports its resolved commit.
+- **Analyze a project:** install only `skills/setup-ai/SKILL.md` using your assistant's supported skill mechanism, then invoke it as `$setup-ai` or select it from `/skills` in Codex, or as `/setup-ai` in Claude Code. The skill inspects and recommends only; it does not install or edit project files. Codex native discovery and invocation were checked for this skill; Claude Code runtime discovery is unavailable in the current environment.
 
 The catalog below lists each artifact's canonical path and purpose.
 
@@ -36,6 +37,12 @@ The catalog also supports nontechnical work. Use [research-and-compare](skills/r
 # Skills
 
 ## Configuration
+
+### `setup-ai`
+
+Path: `skills/setup-ai/SKILL.md`
+
+Analyze project conventions and recommend catalog configuration without modifying project files.
 
 ### `ai-config-builder`
 

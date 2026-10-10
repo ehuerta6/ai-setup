@@ -64,6 +64,9 @@ skills:
   research-and-compare:
     status: testing
 
+  setup-ai:
+    status: testing
+
 agents:
   pr-reviewer:
     status: testing

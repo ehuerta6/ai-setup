@@ -136,16 +136,16 @@ SetupSmith must independently reject unmanaged occupied destinations, validate s
 
 ## Implications for Issues #9 and #10
 
-- **#9 catalog discovery:** Ready to proceed with current catalog structure; discover skills by `SKILL.md` directories and don't treat `registry.yaml` as exhaustive. Use immutable revision reads and retain supporting files. No discovery code was added.
-- **#10 guided analysis / `setup-ai`:** Preserve one-skill startup and load `ai-config-builder` and `audit-ai-config` from a retrievable pinned source on demand. Before implementation, resolve the Codex invocation syntax: current Codex docs document `$setup-ai` or selecting through `/skills`, while the MVP spec states `/setup-ai`. Also run a real Claude Code fixture/invocation before claiming cross-assistant compatibility. This is a narrow workflow clarification, not an architecture change.
-- **Batch 2 readiness:** #9 is technically ready. #10 is not ready to claim its specified invocation behavior until the Codex `/setup-ai` versus `$setup-ai` mismatch is resolved; cross-assistant acceptance also remains open pending Claude runtime and eventual `setup-ai` invocation tests.
+- **#9 catalog discovery:** Implemented as a read-only CLI command. It discovers skills by `SKILL.md` directories and does not treat `registry.yaml` as exhaustive. It uses immutable revision reads and retains supporting files.
+- **#10 guided analysis / `setup-ai`:** Implemented as a read-only skill that preserves one-skill startup and loads `ai-config-builder` and `audit-ai-config` from a retrievable pinned source on demand. Codex guidance is `$setup-ai` or selecting through `/skills`; Claude Code uses `/setup-ai`. A real Claude Code fixture/invocation test remains unavailable, so cross-assistant runtime compatibility is unverified.
+- **Batch 2 readiness:** #9 discovery and #10 guided analysis are implemented. Managed installation and synchronization remain unimplemented. Claude Code runtime acceptance remains open pending native invocation tests.
 
 ## Remaining uncertainties
 
 - Claude Code recognition/invocation unavailable (no executable).
 - `npx --offline --yes skills --help` failed with npm `ENOTCACHED`; package not cached and registry unavailable. Vercel runtime not tested.
 - Remote Git source/tag/commit resolution was documented but not executed in the fixture tests.
-- No SetupSmith bootstrap, manifest, sync, source-freshness, installer rollback, symlink, Windows/Linux portability, or security testing was possible because these features do not yet exist or were outside the controlled experiment. Codex skill invocation syntax in the spec needs clarification as recorded above.
+- No SetupSmith managed bootstrap, manifest, sync, source-freshness, installer rollback, or managed installation testing was possible because these features do not yet exist. Windows/Linux portability and broader security testing were outside the controlled experiment. Codex skill invocation syntax is documented in the MVP spec; Claude Code native invocation remains untested.
 
 ## Verification record
 
