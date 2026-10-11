@@ -51,6 +51,8 @@ Determine:
 
 Prefer the smallest correct change.
 
+When the approach depends on an unfamiliar or version-sensitive API or an external integration, check the project's installed versions and the relevant authoritative documentation before choosing an approach. Skip external research for routine internal changes.
+
 Do not bundle cleanup or refactors that are not required.
 
 ### 4. Implement incrementally

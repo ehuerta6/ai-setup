@@ -75,6 +75,8 @@ Look for:
 - acceptance criteria with no verification;
 - checks claimed as passing without evidence.
 
+For nontrivial cross-boundary or high-risk changes, also identify critical assumptions and plausible regression paths beyond the diff. Verify the most consequential ones against real code or tests when feasible, and report what could not be checked. Keep this focused; trivial PRs do not need an exhaustive audit.
+
 ### 5. Report findings
 
 Order findings by severity.

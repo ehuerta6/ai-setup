@@ -1,0 +1,73 @@
+{
+  "routing_cases": [
+    {
+      "id": "grill-ambiguous-feature",
+      "target_skill": "grill-me",
+      "expected_skill": "grill-me",
+      "kind": "positive",
+      "prompt": "I want to add team sharing, but the audience, permissions, and sharing behavior are still unclear. Help me resolve the decisions before implementation."
+    },
+    {
+      "id": "grill-approved-issue",
+      "target_skill": "grill-me",
+      "expected_skill": "implement-issue",
+      "kind": "routing-away",
+      "prompt": "Implement this approved issue. The acceptance criteria and design decisions are complete."
+    },
+    {
+      "id": "implement-approved-issue",
+      "target_skill": "implement-issue",
+      "expected_skill": "implement-issue",
+      "kind": "positive",
+      "prompt": "Implement issue #123 from its acceptance criteria in this repository."
+    },
+    {
+      "id": "implement-reproduction-first",
+      "target_skill": "implement-issue",
+      "expected_skill": "debug-with-evidence",
+      "kind": "routing-away",
+      "prompt": "A production bug is intermittent. Reproduce it and identify the cause before changing code."
+    },
+    {
+      "id": "review-pull-request",
+      "target_skill": "review-pr",
+      "expected_skill": "review-pr",
+      "kind": "positive",
+      "prompt": "Review this completed pull request against its issue requirements and engineering quality."
+    },
+    {
+      "id": "review-new-feature-request",
+      "target_skill": "review-pr",
+      "expected_skill": "implement-issue",
+      "kind": "routing-away",
+      "prompt": "Implement a new feature from this approved issue; no pull request exists yet."
+    }
+  ],
+  "behavior_checks": [
+    {
+      "skill": "grill-me",
+      "expectation": "Clarifying questions are grouped into rounds",
+      "instruction_anchor": "Ask questions in rounds instead of one at a time."
+    },
+    {
+      "skill": "implement-issue",
+      "expectation": "Acceptance criteria are checked individually",
+      "instruction_anchor": "check every acceptance criterion individually"
+    },
+    {
+      "skill": "implement-issue",
+      "expectation": "External and version-sensitive approaches use installed versions and authoritative docs",
+      "instruction_anchor": "installed versions and the relevant authoritative documentation"
+    },
+    {
+      "skill": "review-pr",
+      "expectation": "Requirement and quality findings remain distinct",
+      "instruction_anchor": "Report requirement mismatches separately from code-quality findings."
+    },
+    {
+      "skill": "review-pr",
+      "expectation": "High-risk reviews check plausible paths beyond the diff",
+      "instruction_anchor": "plausible regression paths beyond the diff"
+    }
+  ]
+}

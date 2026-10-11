@@ -27,6 +27,8 @@ Do not treat nearby errors as proof of the root cause.
 
 Create the smallest reliable signal that demonstrates the exact bug.
 
+Prefer a specific, fast, repeatable signal. For intermittent failures, measure a reproduction rate across a useful number of attempts, or establish another reliable diagnostic signal when feasible. State the sample or signal used; if measurement is impractical, explain why and use the best available reproduction.
+
 Prefer, in roughly this order:
 
 - existing failing test;
