@@ -59,6 +59,8 @@ Look for concrete problems in:
 
 Prefer automation over prose rules for mechanical failures.
 
+When a deterministic check is proposed for a repeated, evidenced failure, demonstrate when feasible that it catches the historical failure and accepts the correct case. Prefer fixing architecture, types, checks, or tests over adding redundant prose. Catalog changes still require the user's approval; a retro recommendation does not adopt itself.
+
 #### Tools
 
 - repeated expensive or unnecessary tool usage;

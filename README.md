@@ -409,9 +409,12 @@ A workflow being present in this repository does not automatically make it part 
 - `rules/` — stable engineering constraints
 - `templates/` — reusable artifact structures
 - `project-instructions/` — reusable multi-chat project behavior
+- `evals/skills/` — lightweight skill evaluation fixtures and their limitations
 - `registry.yaml` — artifact identity and adoption status
 - `AGENTS.md` — instructions for agents working inside this repository
 - `WORKFLOWS.md` — scenario-based guide for choosing workflows
+
+Run the catalog and structural skill evaluation checks with `python3 scripts/validate_catalog.py`.
 
 # Principles
 
