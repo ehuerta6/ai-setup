@@ -81,13 +81,13 @@ An issue is ready when all of its blockers are complete.
 
 Vertical slices are the default.
 
-For a mechanical change whose blast radius makes independent vertical slices impossible, use an expand-migrate-contract sequence:
+Use an expand-migrate-contract sequence only for a cross-cutting migration whose mechanical coupling makes independently green vertical slices unsafe or impractical, such as changing a shared schema, type, or contract with many consumers:
 
-1. Expand: introduce the new form without removing the old one.
-2. Migrate: move callers in bounded batches.
-3. Contract: remove the old form after migration is complete.
+1. **Expand:** introduce the new form while keeping the old form compatible; verify both can coexist.
+2. **Migrate:** move consumers in bounded batches. Add dependency edges only where a stage or batch is blocked by earlier work, and give each batch a realistic check against the mixed state.
+3. **Contract:** remove the old form after all consumers have moved; verify no old use remains and the new form works on its own.
 
-Keep the repository working between stages whenever practical.
+Keep the repository working between stages whenever practical. If even bounded batches cannot remain independently green, say why and define the integration branch and verification gate that will validate the combined migration. Do not promise independent green tickets in that case. Do not use this sequence for ordinary features or local refactors that can be delivered as vertical slices.
 
 ### 6. Present the proposed breakdown
 
