@@ -4,6 +4,8 @@ Reusable configuration for AI-assisted software engineering, with selected workf
 
 Browse this README to find configuration. Use [WORKFLOWS.md](WORKFLOWS.md) to choose a process for a specific task.
 
+For Google Gemini products and Antigravity guidance that routes back to canonical `ai-setup` skills, see [gemini/README.md](gemini/README.md). This is an integration guide, not a second configuration catalog.
+
 Projects can adopt only what they need. Keep product behavior, architecture, and other project-specific decisions in the project repository.
 
 ## Quick start

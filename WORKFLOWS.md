@@ -136,6 +136,8 @@ Do not blindly paste the reusable preset as the final instructions.
 
 Use `research-and-compare` when a decision depends on external evidence or a structured comparison. For a continuing multi-chat research effort, start with `project-instructions/research-workspace.md` and adapt it to the project's sources and question.
 
+For optional Google Gemini research, Gemini Notebook (formerly NotebookLM), Workspace, and creative-media routes, see [gemini/WORKFLOWS.md](gemini/WORKFLOWS.md). It points back to canonical skills and does not replace this router.
+
 
 ## Feature is still unclear
 
