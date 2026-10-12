@@ -82,6 +82,14 @@ Research a question and compare options using current, traceable evidence and ex
 
 ## Planning
 
+### `adversarial-discovery` (testing)
+
+Path: `skills/adversarial-discovery/SKILL.md`
+
+Coordinate independent, evidence-backed analysis and adversarial specification review for consequential decisions with meaningful uncertainty. This experimental workflow complements the existing discovery and specification skills; it does not approve decisions or require multi-agent execution for simple work.
+
+Manual evaluation prompts and limitations: [adversarial-discovery scenarios](evals/skills/adversarial-discovery.md).
+
 ### `grill-me`
 
 Path: `skills/grill-me/SKILL.md`

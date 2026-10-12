@@ -147,6 +147,8 @@ For optional Google Gemini research, Gemini Notebook (formerly NotebookLM), Work
 
 Use `grill-me` to resolve product and technical questions before writing a spec. If a concrete uncertainty is easier to test than discuss, use `prototype` to compare isolated UI or logic alternatives. Skip it when discussion resolves the question. Prototypes are temporary and do not automatically become production code.
 
+For consequential decisions with competing options or cross-cutting uncertainty, optionally use `adversarial-discovery` to coordinate independent analysis and a fresh-context spec review. Keep ordinary clarification in `grill-me`; the orchestration workflow is experimental and all proposals remain subject to explicit user approval.
+
 Flow:
 
 grill-me
