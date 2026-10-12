@@ -5,6 +5,8 @@ description: Audit and clean technical writing so it becomes concrete, concise, 
 
 # Unslop
 
+> Adapted material includes work attributed to Lauren Tan (MIT; see [LICENSE](LICENSE)). Material associated with `theclaymethod/unslop` also informed this skill, but its README's MIT claim lacked a verifiable license notice or named copyright holder. Confirm those terms before redistributing adapted material.
+
 Improve technical prose by removing vague, formulaic, inflated, or synthetic-sounding writing.
 
 Use this for:
