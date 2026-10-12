@@ -86,6 +86,8 @@ Classify relevant reusable configuration as:
 
 Before changing the project, present the proposed files and classify each as ADD, KEEP EXISTING, REPLACE, or SKIP.
 
+For local Codex setups, first check whether relevant skills are already installed globally (see [Codex shared configuration](README.md#codex-shared-configuration)). Reuse global skills when suitable rather than copying them to every repository. Keep project-specific instructions and stack-specific configuration local when justified.
+
 Project-specific behavior and architecture take priority over reusable defaults.
 
 
@@ -104,6 +106,8 @@ Audit for:
 - conflicts;
 - missing reusable configuration;
 - reusable behavior that belongs in ai-setup.
+
+For installed global Codex skills, inspect them with `npx skills ls -g` and update copies on demand with `npx skills update -g`. GitHub pushes do not synchronize them automatically. Update a local `ai-setup` checkout with Git separately; shared rule references and custom agent TOML files are not updated by the skills CLI. Remove local duplicates only after confirming they do not contain project-specific adaptations.
 
 
 ## New ChatGPT or Claude Project

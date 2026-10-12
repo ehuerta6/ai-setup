@@ -11,10 +11,36 @@ Projects can adopt only what they need. Keep product behavior, architecture, and
 ## Quick start
 
 - **Choose a workflow:** start with the scenario router in [WORKFLOWS.md](WORKFLOWS.md), then load the relevant skills.
-- **Adopt configuration into a project:** inspect its AI instructions, architecture, stack, Git workflow, and conventions. Then follow the Project adoption route in [WORKFLOWS.md](WORKFLOWS.md) and copy only the selected canonical files. For example, add `skills/firebase/SKILL.md` only to a project that uses Firebase, and keep product-specific instructions there.
+- **Use skills in Codex:** [install selected skills globally](#codex-shared-configuration) instead of copying them into each local project.
+- **Adopt configuration into a project:** inspect its existing instructions, stack, and conventions; classify what to add or keep using [WORKFLOWS.md](WORKFLOWS.md). Keep product-specific behavior in that repository, and install stack-specific skills only where they apply.
 - **Set up a multi-chat workspace:** choose a Project Instructions preset below and tailor it with `skills/ai-config-builder/SKILL.md`.
 
 The catalog below lists each artifact's canonical path and purpose.
+
+## Codex: shared configuration
+
+### Skills (verified locally)
+
+The [skills CLI](https://github.com/vercel-labs/skills) discovers skills in this repository. In a local Codex trial, it found 21 skills; three selected global installations were recognized by Codex. To reproduce that **selective** setup:
+
+```sh
+npx skills add ehuerta6/ai-setup --list
+npx skills add ehuerta6/ai-setup -g -a codex -s github-flow -s implement-issue -s review-pr
+npx skills ls -g
+npx skills update -g
+```
+
+These commands are examples, not a default bundle. Install only useful skills, and keep stack- or project-specific configuration where it belongs. The trial installed **copies** in `~/.agents/skills/`; pushing a change to GitHub does **not** update them automatically. Run `npx skills update -g` when needed. The update command confirmed the installed copies were current, but replacing a copy after an upstream change has **not** yet been tested. The optional third-party `find-skills` skill is not required.
+
+### Agents (not yet tested locally)
+
+The Markdown files in [agents/](agents/) define canonical responsibilities; they are **not** directly installable as Codex custom agents using `npx skills`. Codex currently uses standalone TOML definitions under `~/.codex/agents/` (personal) or `.codex/agents/` (per project), with `name`, `description`, and `developer_instructions`. A small TOML definition can ask the subagent to load its canonical Markdown file from a local checkout, but that read and the subagent's actual behavior must be tested in the target environment. Start with `agents/pr-reviewer.md` rather than converting every agent. See the [Codex subagents guide](https://developers.openai.com/codex/subagents).
+
+### Rules and project instructions (not yet tested locally)
+
+Codex reads global instructions from `~/.codex/AGENTS.md` and repository-specific instructions from a project's `AGENTS.md`. Keep [rules/](rules/) canonical, and add a short global instruction pointing to a **local checkout** of `ai-setup/rules/` when needed; ask Codex to load only relevant rules. This is a pointer, not automatic loading or Git synchronization. Project-specific decisions take precedence over reusable guidance. Codex `~/.codex/rules/*.rules` govern command permissions, **not** these Markdown engineering rules. See [AGENTS.md](https://developers.openai.com/codex/guides/agents-md) and [Codex rules](https://developers.openai.com/codex/rules).
+
+Preserve existing global and project instructions when adding this guidance. Update the local `ai-setup` checkout separately with Git: `npx skills update -g` updates installed skills, **not** this checkout, TOML agent definitions, or rules. Local files and global installations may be unavailable in remote/cloud Codex environments; verify access there rather than assuming it.
 
 ## Choosing configuration
 
@@ -28,7 +54,7 @@ Use the smallest artifact that fits the job:
 | Template | A starting structure for a recurring document or decision. |
 | Project Instruction | Shared context for a long-running, multi-chat workspace, such as [research-workspace](project-instructions/research-workspace.md). |
 
-You do not need to adopt the whole catalog. In an existing repository, inspect its own instructions first, then copy only the relevant canonical files and keep product and architecture decisions in that repository. For example, a Firebase project might adopt `skills/firebase/SKILL.md` and `rules/security.md`, while leaving unrelated skills behind.
+You do not need to adopt the whole catalog. In an existing repository, inspect its instructions first, prefer already installed global skills when appropriate, and copy or install project-scoped configuration only when justified. Keep product and architecture decisions in the project. For example, a Firebase project may need the `firebase` skill and `security` rule, but unrelated projects do not.
 
 The catalog also supports nontechnical work. Use [research-and-compare](skills/research-and-compare/SKILL.md) for a focused comparison, [learning-coach](project-instructions/learning-coach.md) for a multi-chat learning workspace, or [project-base](project-instructions/project-base.md) for personal planning that needs continuity across chats. Skills guide a task; Project Instructions hold durable workspace context. The project workspace, not this reusable catalog, should contain personal details and decisions.
 
