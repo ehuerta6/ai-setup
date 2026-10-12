@@ -39,7 +39,7 @@ For each relevant configuration item return:
 - recurring friction or successful outcomes recorded in retros or task history;
 - generic rules embedded in project-specific context.
 
-Treat missing usage evidence as unknown, not proof that configuration is unused. Do not change registry adoption status without explicit user approval.
+Treat missing usage evidence as unknown, not proof that configuration is unused. Do not infer adoption or acceptance from catalog presence; rely on explicit decisions and usage evidence.
 
 Project-specific behavior wins over reusable defaults.
 
