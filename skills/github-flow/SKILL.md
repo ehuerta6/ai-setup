@@ -7,11 +7,18 @@ description: Execute Git and GitHub operations using the repository's documented
 
 Use this skill when performing Git or GitHub workflow operations.
 
-The stable conventions live in `rules/github.md`.
+Start with the target repository's `AGENTS.md`, Git documentation, and observed
+configuration/history. Project-specific instructions and conventions take
+precedence. Load the canonical `rules/github.md` or a project-adopted copy when
+accessible; an individual skill installation may not include that separate
+file.
 
-Read that file first.
-
-Project-specific Git instructions override the global rule.
+When no repository convention can be established, use only the minimal safe
+guidance below: keep changes focused, use a short-lived branch and
+Conventional Commit message for collaborative work, verify the diff and
+acceptance criteria before opening a PR, and never merge without explicit
+authorization. State unknown required checks or merge preferences instead of
+inventing them.
 
 ## Process
 
@@ -41,7 +48,8 @@ When using a branch, start from the latest intended base.
 
 Use the repository's commit convention.
 
-When none exists, follow `rules/github.md`.
+When none exists, use the minimal safe guidance above and report any unknown
+repository requirements.
 
 Before committing:
 
