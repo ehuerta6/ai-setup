@@ -117,9 +117,7 @@ Use `writing-for-agents` when useful.
 
 ## Adoption
 
-New configuration starts as `testing`.
-
-Do not mark it accepted or default without explicit user confirmation and real usage evidence.
+Treat new configuration as experimental until actual usage and explicit user confirmation justify adoption. Do not infer acceptance or default status from catalog presence.
 
 ## Return
 

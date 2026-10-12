@@ -254,7 +254,7 @@ Flow:
 inspect existing configuration
 → CREATE / EXTEND EXISTING / DON'T CREATE
 → create compact configuration
-→ registry status: testing
+→ treat as experimental
 → test on a real task
 
 Possible artifact types:

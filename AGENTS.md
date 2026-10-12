@@ -41,9 +41,7 @@ Do straightforward work directly.
 
 Skills and workflows in this repository may be experimental.
 
-Check `registry.yaml` before treating something as an established default.
-
-Testing does not imply adoption.
+Do not treat catalog presence as evidence that a workflow is accepted or adopted. Prefer demonstrated use and explicit decisions.
 
 ## This repository
 

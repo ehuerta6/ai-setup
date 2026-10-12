@@ -390,20 +390,6 @@ Path: `project-instructions/research-workspace.md`
 
 For long-running, multi-chat research projects with shared sources, findings, decisions, and continuity notes.
 
-# Registry
-
-`registry.yaml` tracks artifact identity and adoption status.
-
-Possible statuses:
-
-- `testing`
-- `accepted`
-- `rejected`
-- `default`
-- `replaced`
-
-A workflow being present in this repository does not automatically make it part of the default setup.
-
 # Repository structure
 
 - `skills/` — reusable workflows
@@ -411,12 +397,10 @@ A workflow being present in this repository does not automatically make it part 
 - `rules/` — stable engineering constraints
 - `templates/` — reusable artifact structures
 - `project-instructions/` — reusable multi-chat project behavior
-- `evals/skills/` — lightweight skill evaluation fixtures and their limitations
-- `registry.yaml` — artifact identity and adoption status
 - `AGENTS.md` — instructions for agents working inside this repository
 - `WORKFLOWS.md` — scenario-based guide for choosing workflows
 
-Run the catalog and structural skill evaluation checks with `python3 scripts/validate_catalog.py`.
+Run basic catalog consistency checks with `python3 scripts/validate_catalog.py`.
 
 # Principles
 

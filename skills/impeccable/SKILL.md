@@ -5,7 +5,7 @@ description: Design, critique, audit, and refine production frontend UI and UX w
 
 # Impeccable
 
-> This adapted file has been modified. See `THIRD_PARTY_NOTICES.md` for the applicable license notice.
+> Adapted from work by Paul Bakaus under Apache-2.0; this file has been modified. See [LICENSE](LICENSE).
 
 Use this skill for frontend design and UX work.
 
