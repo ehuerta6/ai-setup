@@ -5,11 +5,11 @@ description: Orchestrate evidence-backed, independent analysis and review for co
 
 # Adversarial discovery
 
-Use this workflow when uncertainty, competing options, cross-cutting constraints, or decision impact make independent analysis useful. Route simple requirements and settled decisions through the ordinary workflow, including `grill-me` when clarification is still needed.
+Use this workflow when uncertainty, competing options, cross-cutting constraints, or decision impact make independent analysis useful. Route simple requirements and settled decisions through the ordinary workflow; use `product-grill` for unresolved product requirements when the user should not choose technical internals, and `grill-me` for technical or combined product and technical clarification.
 
 ## Process
 
-1. **Freeze the scope.** Clarify the decision and questions, confirmed constraints, source baseline, current draft-spec revision (or state that none exists), and time/token/agent budget. Use `grill-me` for unresolved questions; record the resulting question set before analysis.
+1. **Freeze the scope.** Clarify the decision and questions, confirmed constraints, source baseline, current draft-spec revision (or state that none exists), and time/token/agent budget. Use `product-grill` for unresolved product requirements when appropriate, or `grill-me` for technical or combined product and technical clarification; record the resulting question set before analysis.
 2. **Choose a feasible analysis count.** Use about 1 analysis for modest uncertainty, 3 for meaningful uncertainty, or up to 5 for complex/high-impact work. These are heuristics, not quotas. Adapt to actual runtime, isolation, concurrency, and resource limits. Record the requested and actual counts and why they differ. Never claim an unavailable or unexecuted agent ran.
 3. **Collect independent first passes.** Give each actual analyst the same frozen questions and source baseline. Assign complementary lenses only where useful. Keep initial outputs private from other analysts until submitted; if the runtime cannot provide that isolation, record the limitation.
 4. **Select debate deliberately.** Compare the independent submissions for material disagreement, consequential tradeoffs, unsupported assumptions, and possibly correlated errors. Debate only when it could change a decision, expose a meaningful risk, or improve the evidence. Skip it when the answer is straightforward and adequately supported. Agreement alone is not a reason to debate or evidence that a claim is correct.

@@ -17,7 +17,7 @@ Use when a new or empty project needs the minimum AI configuration required to b
 
 Select only immediately useful configuration.
 
-Do not use Bootstrap to discover the product itself. Use `grill-me` when product or technical decisions are unresolved.
+Do not use Bootstrap to discover the product itself. Use `product-grill` for unresolved product requirements when the user should not have to choose technical internals; use `grill-me` when product and technical decisions are both in scope for a user who is comfortable resolving them.
 
 Do not recommend stack-specific or workflow-specific configuration before decisions justify it.
 

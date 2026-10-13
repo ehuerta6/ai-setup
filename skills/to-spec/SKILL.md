@@ -107,6 +107,6 @@ A spec is ready when another agent can read it and understand:
 
 If important `Open questions` remain, the spec is not ready for implementation.
 
-Use `grill-me` to resolve them first.
+Use `product-grill` for unresolved product questions when product-focused discovery is appropriate. Use `grill-me` for unresolved technical questions or when product and technical decisions need clarification together. Then update the specification without silently resolving remaining questions.
 
 Once approved, the spec can be passed to `to-issues`.

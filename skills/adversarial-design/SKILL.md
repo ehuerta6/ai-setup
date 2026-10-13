@@ -9,8 +9,11 @@ Use for a product idea or major feature whose implementation depends on
 multiple unresolved product, behavior, or architecture decisions. Coordinate
 existing project discovery and design capabilities into one coherent Design
 Package. This is an experimental testing workflow, not a required step for
-every project. For a simple bounded ambiguity, use `grill-me`; for settled
-requirements, use `to-spec` or the project's ordinary implementation flow.
+every project. For simple bounded product ambiguity, use `product-grill` when
+the user should not choose technical internals; use `grill-me` when product
+and technical decisions are both in scope for a user who is comfortable
+resolving them. For settled requirements, use `to-spec` or the project's
+ordinary implementation flow.
 
 The objective is to reduce unresolved implementation decisions and late
 redesign through evidence and explicit decisions. It cannot guarantee a
@@ -31,9 +34,10 @@ iterate only where a later finding exposes an upstream conflict.
 2. **Order the open decisions.** Build a lightweight Decision Dependency
    Graph: list unresolved decisions, their dependencies, impact, reversibility,
    and evidence needed. Resolve foundational, high-impact, or blocking
-   decisions before downstream details. Use `grill-me`'s decision-tree method
-   for questions requiring the user's judgment; do not duplicate its interview
-   procedure.
+   decisions before downstream details. Use `product-grill` for product
+   questions when the user should not choose technical internals; use
+   `grill-me`'s decision-tree method for technical or combined product and
+   technical questions. Do not duplicate either skill's interview procedure.
 3. **Research and deliberate selectively.** Use `research-and-compare` for
    decisions that depend on current external evidence. Prefer primary sources,
    record provenance, and distinguish fact, inference, and recommendation.

@@ -94,9 +94,15 @@ Hand-authored scenarios and limitations (not evaluations run): [adversarial-disc
 
 Path: `skills/adversarial-design/SKILL.md`
 
-Coordinate the complete software design phase for a product or major feature, from project grounding and decision ordering through architecture, behavior, validation, specification review, and a human approval gate. Selectively reuse `adversarial-discovery` for consequential decisions; use ordinary `grill-me` for simpler discovery.
+Coordinate the complete software design phase for a product or major feature, from project grounding and decision ordering through architecture, behavior, validation, specification review, and a human approval gate. Selectively reuse `adversarial-discovery` for consequential decisions; use `product-grill` for product-only discovery or `grill-me` for combined product and technical clarification.
 
 Hand-authored scenarios and limitations (not evaluations run): [adversarial-design scenarios](skills/adversarial-design/references/evaluation-scenarios.md).
+
+### `product-grill` (testing)
+
+Path: `skills/product-grill/SKILL.md`
+
+Rigorously clarify product requirements without asking users to choose technical internals. Produces a categorized handoff for `to-spec`; technical uncertainties remain for engineering research.
 
 ### `grill-me`
 

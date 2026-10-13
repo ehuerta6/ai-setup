@@ -29,11 +29,11 @@ These routes are suggestions, not a required sequence. Use only the steps that h
 
 ## Only an idea
 
-Use when the product or technical direction is still unclear.
+Use `product-grill` when outcomes, users, scope, or product behavior need clarification and the user should not have to make technical design choices. Use `grill-me` when the user wants to resolve product and technical decisions together and is comfortable with those decisions.
 
 Flow:
 
-grill-me
+product-grill or grill-me, as appropriate
 → optionally prototype for an unresolved concrete design question
 → to-spec
 → ai-config-builder adopt when the project is defined
@@ -48,7 +48,7 @@ Use when the desired product is understood but implementation has not begun.
 
 Flow:
 
-grill-me when meaningful ambiguity remains
+product-grill or grill-me, as appropriate, when meaningful ambiguity remains
 → optionally prototype for an unresolved concrete design question
 → to-spec
 → spec-reviewer when useful
@@ -145,13 +145,15 @@ For optional Google Gemini research, Gemini Notebook (formerly NotebookLM), Work
 
 ## Feature is still unclear
 
-Use `grill-me` to resolve product and technical questions before writing a spec. If a concrete uncertainty is easier to test than discuss, use `prototype` to compare isolated UI or logic alternatives. Skip it when discussion resolves the question. Prototypes are temporary and do not automatically become production code.
+Use `product-grill` to discover and challenge product requirements when the user should not be asked to choose technical internals. Use `grill-me` when product and technical decisions are both in scope for a user who is comfortable resolving them. Both should produce clarified decisions for `to-spec`, not implementation.
 
-For a consequential **bounded decision** with meaningful competing options or uncertainty, optionally use `adversarial-discovery` to coordinate independent analysis, selective structured debate, and evidence-based synthesis. For a product or major feature that needs its **complete design phase** coordinated, optionally use `adversarial-design`; it selectively reuses `adversarial-discovery` and existing research, prototyping, specification, and review skills. Use ordinary `grill-me` for simpler discovery. Both adversarial skills are experimental testing workflows, not mandatory steps for every project, and proposals remain subject to explicit user approval.
+If a concrete design uncertainty is easier to test than discuss, use `prototype` to compare isolated UI or logic alternatives. Skip it when discussion resolves the question. Prototypes are temporary and do not automatically become production code.
+
+For a consequential **bounded decision** with meaningful competing options or uncertainty, optionally use `adversarial-discovery` to coordinate independent analysis, selective structured debate, and evidence-based synthesis. For a product or major feature that needs its **complete design phase** coordinated, optionally use `adversarial-design`; it selectively reuses `adversarial-discovery` and existing research, prototyping, specification, and review skills. For simpler discovery, use `product-grill` for product questions or `grill-me` when the user is resolving product and technical questions together. Both adversarial skills are experimental testing workflows, not mandatory steps for every project, and proposals remain subject to explicit user approval.
 
 Flow:
 
-grill-me
+product-grill or grill-me, as appropriate
 → optionally prototype for an unresolved concrete design question
 → to-spec
 → spec-reviewer when useful

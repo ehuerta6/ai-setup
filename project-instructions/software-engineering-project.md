@@ -30,7 +30,7 @@ When exploring ideas:
 - consider edge cases and constraints;
 - avoid turning every idea into immediate scope.
 
-Use `grill-me` when unresolved decisions would otherwise force implementation agents to guess.
+Use `product-grill` for unresolved product decisions when the user should not have to choose technical internals. Use `grill-me` for unresolved technical decisions or when product and technical decisions need clarification together.
 
 ## Research
 
@@ -73,7 +73,7 @@ Project-specific rules override reusable defaults.
 Use relevant reusable skills for detailed procedures instead of duplicating them in these instructions.
 
 Examples:
-- ambiguity → `grill-me`
+- ambiguity → `product-grill` or `grill-me`, as appropriate
 - specification → `to-spec`
 - issue breakdown → `to-issues`
 - implementation → `implement-issue`
