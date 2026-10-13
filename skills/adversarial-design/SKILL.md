@@ -34,9 +34,10 @@ iterate only where a later finding exposes an upstream conflict.
 2. **Order the open decisions.** Build a lightweight Decision Dependency
    Graph: list unresolved decisions, their dependencies, impact, reversibility,
    and evidence needed. Resolve foundational, high-impact, or blocking
-   decisions before downstream details. Use `grill-me`'s decision-tree method
-   for questions requiring the user's judgment; do not duplicate its interview
-   procedure.
+   decisions before downstream details. Use `product-grill` for product
+   questions when the user should not choose technical internals; use
+   `grill-me`'s decision-tree method for technical or combined product and
+   technical questions. Do not duplicate either skill's interview procedure.
 3. **Research and deliberate selectively.** Use `research-and-compare` for
    decisions that depend on current external evidence. Prefer primary sources,
    record provenance, and distinguish fact, inference, and recommendation.

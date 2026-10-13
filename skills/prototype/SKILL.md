@@ -45,7 +45,7 @@ Use when behavior, a state machine, transitions, or edge cases are difficult to 
 
 Summarize the question, alternatives tried, observations, limitations, and the decision or remaining uncertainty. Record a durable product or architecture decision with `templates/DECISION.md` only when it is important, non-obvious, and likely to matter later. Include relevant findings in the spec or implementation handoff.
 
-A prototype can inform `to-spec`; it does not replace resolving decisions with `grill-me` or specify implementation by itself. Retain or merge prototype code only when the user explicitly requires it. Otherwise remove it from the main implementation.
+A prototype can inform `to-spec`; it does not replace resolving product questions with `product-grill` or technical and combined product/technical questions with `grill-me`, and it does not specify implementation by itself. Retain or merge prototype code only when the user explicitly requires it. Otherwise remove it from the main implementation.
 
 ## Example scenario
 

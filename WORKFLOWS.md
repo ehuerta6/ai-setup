@@ -153,7 +153,7 @@ For a consequential **bounded decision** with meaningful competing options or un
 
 Flow:
 
-grill-me
+product-grill or grill-me, as appropriate
 → optionally prototype for an unresolved concrete design question
 → to-spec
 → spec-reviewer when useful
