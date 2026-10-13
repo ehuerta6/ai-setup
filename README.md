@@ -86,9 +86,17 @@ Research a question and compare options using current, traceable evidence and ex
 
 Path: `skills/adversarial-discovery/SKILL.md`
 
-Coordinate independent, evidence-backed analysis and adversarial specification review for consequential decisions with meaningful uncertainty. This experimental workflow complements the existing discovery and specification skills; it does not approve decisions or require multi-agent execution for simple work.
+Resolve complex, bounded decisions through independent analysis, selective structured debate, and evidence. This experimental workflow preserves dissent and approval boundaries; agreement is not proof.
 
-Manual evaluation prompts and limitations: [adversarial-discovery scenarios](evals/skills/adversarial-discovery.md).
+Hand-authored scenarios and limitations (not evaluations run): [adversarial-discovery scenarios](skills/adversarial-discovery/references/evaluation-scenarios.md).
+
+### `adversarial-design` (testing)
+
+Path: `skills/adversarial-design/SKILL.md`
+
+Coordinate the complete software design phase for a product or major feature, from project grounding and decision ordering through architecture, behavior, validation, specification review, and a human approval gate. Selectively reuse `adversarial-discovery` for consequential decisions; use ordinary `grill-me` for simpler discovery.
+
+Hand-authored scenarios and limitations (not evaluations run): [adversarial-design scenarios](skills/adversarial-design/references/evaluation-scenarios.md).
 
 ### `grill-me`
 
