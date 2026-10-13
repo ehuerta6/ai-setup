@@ -9,8 +9,11 @@ Use for a product idea or major feature whose implementation depends on
 multiple unresolved product, behavior, or architecture decisions. Coordinate
 existing project discovery and design capabilities into one coherent Design
 Package. This is an experimental testing workflow, not a required step for
-every project. For a simple bounded ambiguity, use `grill-me`; for settled
-requirements, use `to-spec` or the project's ordinary implementation flow.
+every project. For simple bounded product ambiguity, use `product-grill` when
+the user should not choose technical internals; use `grill-me` when product
+and technical decisions are both in scope for a user who is comfortable
+resolving them. For settled requirements, use `to-spec` or the project's
+ordinary implementation flow.
 
 The objective is to reduce unresolved implementation decisions and late
 redesign through evidence and explicit decisions. It cannot guarantee a
