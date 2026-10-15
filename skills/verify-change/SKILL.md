@@ -82,7 +82,16 @@ For documentation changes, check behavior and deployment claims against current 
 
 ### 6. Report evidence
 
-Report each meaningful check and its actual result.
+Report each meaningful check and its actual result, identifying the exact
+revision it evaluated. For PR verification, capture the current head SHA and
+associate hosted checks with that SHA; keep local, CI, Preview, and manual
+results distinct. After a rebase, new commit, or integration, refresh evidence
+for the new head instead of carrying forward earlier results.
+
+Confirm that required checks and relevant tests actually executed. A green
+workflow does not cover tests or jobs marked skipped, pending, or
+`action_required`. State those gaps and any fork or external authorization
+needed; do not describe incomplete verification as complete.
 
 Example:
 
