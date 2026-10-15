@@ -42,7 +42,17 @@ Follow the repository's configured workflow.
 
 Keep the change focused on one logical unit.
 
-When using a branch, start from the latest intended base.
+Inspect `git status` before switching branches or preparing a worktree. If the
+checkout is stale, update from the intended base using repository conventions.
+Preserve uncommitted and untracked changes; use an isolated worktree when
+switching or cleaning could put them at risk. Never use destructive reset/clean
+commands without authorization.
+
+When using a branch, start from the latest intended base. For independent
+parallel work, prefer separate branches and worktrees when supported and useful;
+assign distinct issue and file ownership, and serialize work that shares a
+working directory or has risky overlap. Use the target repository's own
+integration conventions after dependencies merge.
 
 ### 3. Commit
 
@@ -62,12 +72,17 @@ Before committing:
 When a PR is part of the repository workflow:
 
 - inspect the complete diff;
+- confirm the PR's current head SHA, effective changed-file diff, and target
+  branch; distinguish the PR's recorded base SHA from the current target tip;
 - verify acceptance criteria;
 - run relevant checks;
 - use `templates/PULL_REQUEST.md` when applicable;
 - link the implementation issue.
 
-Only report checks that actually ran.
+Report checks only for the exact revision they evaluated. Do not reuse earlier
+results after the head changes; refresh the verification summary and PR
+description when needed. `skills/verify-change/SKILL.md` defines the evidence
+to record, including skipped or unavailable checks.
 
 ### 5. Merge
 
