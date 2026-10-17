@@ -85,8 +85,9 @@ When a PR is part of the repository workflow:
 
 Report checks only for the exact revision they evaluated. Do not reuse earlier
 results after the head changes; refresh the verification summary and PR
-description when needed. `skills/verify-change/SKILL.md` defines the evidence
-to record, including skipped or unavailable checks.
+description when needed. If `verify-change` is installed, use it for fuller
+evidence; otherwise report actual passed, failed, skipped and unavailable checks
+and the remaining risk directly. Do not assume a sibling skill is installed.
 
 ### 5. Merge
 
