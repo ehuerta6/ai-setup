@@ -64,7 +64,21 @@ Respect documented project standards over generic preferences.
 
 Do not report stylistic preferences that tooling already enforces.
 
-### 4. Evaluate verification
+### 4. Review structural simplicity when warranted
+
+For nontrivial changes, consider whether the same behavior could be achieved with fewer concepts, branches, mutable flags, wrappers, or layers. Look for meaningful maintainability problems, not a mandated refactor:
+
+- special-case conditionals scattered into unrelated paths instead of one clear domain boundary;
+- abstraction, pass-through helpers, or configuration modes that create indirection without reducing complexity;
+- logic placed in the wrong ownership layer, duplicated canonical helpers, or coupled components;
+- loosely typed boundary data, unnecessary casts or optionality that hides actual invariants;
+- related writes that can leave partial state rather than an appropriate atomic update;
+- unnecessarily serialized independent work when this materially complicates orchestration;
+- modules whose growth, especially crossing around 1,000 lines, **signals** a cohesion problem; size alone is never a failure.
+
+Propose a simpler structure only with a concrete failure mode or material readability/maintenance benefit. Preserve the existing architecture unless the requested change warrants altering it; do not recommend sweeping refactors or abstractions merely to shorten code. The review remains read-only unless the user authorizes edits.
+
+### 5. Evaluate verification
 
 Check whether the evidence actually demonstrates the changed behavior.
 
@@ -73,11 +87,13 @@ Look for:
 - missing tests;
 - tests that only verify implementation details;
 - acceptance criteria with no verification;
-- checks claimed as passing without evidence.
+- checks claimed as passing without evidence;
+- missing real user-path proof for a change that affects application behavior;
+- evidence that omits persistent side effects, permission boundaries, or failure states relevant to the change.
 
 For nontrivial cross-boundary or high-risk changes, also identify critical assumptions and plausible regression paths beyond the diff. Verify the most consequential ones against real code or tests when feasible, and report what could not be checked. Keep this focused; trivial PRs do not need an exhaustive audit.
 
-### 5. Report findings
+### 6. Report findings
 
 Order findings by severity.
 
@@ -89,11 +105,11 @@ For each finding include:
 - concrete failure scenario or impact;
 - requirement or standard involved when applicable.
 
-Do not manufacture findings to make the review look thorough.
+Do not manufacture findings to make the review look thorough. Multiple model approvals are not a substitute for independent evidence and checks.
 
 If no actionable findings exist, say so.
 
-### 6. Report residual risk
+### 7. Report residual risk
 
 After findings, note meaningful verification gaps or areas not exercised.
 

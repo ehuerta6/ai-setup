@@ -55,7 +55,15 @@ Examples:
 
 Do not rerun the full suite after every minor edit.
 
-### 4. Run required completion checks
+### 4. Verify actual application behavior
+
+For a change to a user-facing workflow, prefer the project's existing E2E/browser, desktop, CLI, or API harness. If a project-local `verify-*` skill exists, use its documented launch → doctor → drive → evidence → cleanup process for the affected journeys and meaningful regression paths.
+
+Check the user action, observed result, and relevant persisted or external side effect—not merely a screenshot or direct internal state setter. Verify error paths, authorization, and data integrity where they are affected. For bug fixes, compare before/after reproduction when feasible. Keep test instances, accounts, ports, and data isolated; do not pull production data or invoke destructive external actions without authorization.
+
+Do not drive the entire feature map for every PR; target changed behavior and plausible regressions. Use `create-verification-skill` to establish reusable project-local instructions only when a meaningful verification gap warrants it, and `maintain-verification-skill` when that skill or feature map drifts. If interactive verification is not available, clearly report the gap and use the best reliable signal available.
+
+### 5. Run required completion checks
 
 Before delivery, run the repository's relevant full checks.
 
@@ -67,7 +75,7 @@ If a check cannot be run:
 - explain why;
 - identify the resulting verification gap.
 
-### 5. Inspect the final diff
+### 6. Inspect the final diff
 
 Verify that the diff contains:
 
@@ -80,7 +88,9 @@ Verify that the diff contains:
 
 For documentation changes, check behavior and deployment claims against current code and accepted decisions. Distinguish dated deployment observations from current state, and validate relevant internal links and anchors when practical.
 
-### 6. Report evidence
+### 7. Report evidence
+
+For real-app verification, record the journey driven, environment, tested revision, observed behavior and side effects, and sanitized evidence artifacts. Screenshots or recordings supplement explicit assertions; do not treat visual appearance alone as proof of persistence or correctness.
 
 Report each meaningful check and its actual result, identifying the exact
 revision it evaluated. For PR verification, capture the current head SHA and

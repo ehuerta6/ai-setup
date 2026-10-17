@@ -46,7 +46,7 @@ Ask only when the missing information is a decision the user must make or cannot
 
 Load the minimum context needed for the task.
 
-Prefer pointers to canonical sources over copying their contents into multiple files.
+Prefer pointers to canonical sources over copying their contents into multiple files. Exception: an independently installed skill may embed the minimum operational constraints required to run without the canonical repository. Keep that subset synchronized with its original rule and do not copy whole rules into every skill.
 
 Separate:
 

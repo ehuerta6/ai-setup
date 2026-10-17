@@ -52,7 +52,7 @@ Each issue should:
 - have one clear responsibility;
 - avoid unrelated cleanup;
 - contain enough context to execute without guessing;
-- have observable acceptance criteria.
+- have observable acceptance criteria and, where behavior changes, a concrete before/after or failure/success scenario another agent can verify;
 
 Split an issue when it contains multiple independently useful behaviors.
 

@@ -21,6 +21,8 @@ These routes are suggestions, not a required sequence. Use only the steps that h
 | Coordinating related issues | [Several related issues](#several-related-issues) |
 | Debugging a bug | [Bug](#bug) |
 | Improving tests | [Testing](#testing) |
+| Creating repeatable real-app verification | [Application verification](#application-verification) |
+| Maintaining existing verification instructions | [Verification maintenance](#verification-maintenance) |
 | Getting an independent review | [Independent review](#independent-review) |
 | Preparing a commit, PR, or merge | [Git and GitHub delivery](#git-and-github-delivery) |
 | Handing work to another chat or agent | [Continue work elsewhere](#continue-work-elsewhere) |
@@ -215,6 +217,16 @@ Prioritize meaningful fault detection over test count or arbitrary coverage targ
 Use property-based or mutation testing only when they provide useful signal.
 
 
+## Application verification
+
+Use `create-verification-skill` when a repository needs repeatable, project-local instructions for exercising its real web, desktop, CLI, or API behavior. It creates a local `verify-<app>` skill and feature map, proves at least one journey when possible, and preserves supporting evidence.
+
+During normal implementation or PR review, `verify-change` uses the project's existing harness or verification skill for affected journeys only. Do not generate a new verification skill for every issue, require full-map coverage on every small PR, or test against production state by default.
+
+## Verification maintenance
+
+Use `maintain-verification-skill` when the project's verification instructions or feature map may have drifted. Source inspection and live exercise cover every mapped feature; fix only verification instructions and report product defects separately. Do not confuse a successful maintenance run with authorization to merge.
+
 ## Independent review
 
 Use when separating implementation and review context improves confidence.
@@ -300,6 +312,8 @@ Do not create decision records for trivial choices.
 
 
 ## Core principle
+
+`ai-setup` preserves canonical rules, templates, project instructions, agents, and skills. Prefer shipping relevant operational guidance through self-contained installable skills, without copying entire artifacts or changing their boundaries. `npx skills` does not install Codex agent TOML files, general rules, or Project Instructions.
 
 WORKFLOWS chooses the right tool.
 

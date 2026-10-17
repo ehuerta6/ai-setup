@@ -13,12 +13,16 @@ precedence. Load the canonical `rules/github.md` or a project-adopted copy when
 accessible; an individual skill installation may not include that separate
 file.
 
-When no repository convention can be established, use only the minimal safe
-guidance below: keep changes focused, use a short-lived branch and
-Conventional Commit message for collaborative work, verify the diff and
-acceptance criteria before opening a PR, and never merge without explicit
-authorization. State unknown required checks or merge preferences instead of
-inventing them.
+When no repository convention can be established, use these **self-contained defaults** from the canonical GitHub rule:
+
+- For collaborative work, prefer a short-lived branch from the latest intended target (commonly `main`), with a `feat/`, `fix/`, `docs/`, `refactor/`, `chore/`, or `ci/` prefix when useful.
+- Use Conventional Commit-style messages when the project supplies no convention; keep one logical change per commit/PR.
+- Link implementing PRs to issues with `Closes #<number>` when applicable, and describe the problem, change, verification, and material limitations without copying the issue wholesale.
+- Report only actually executed checks, distinguishing passed, failed, skipped, and unavailable. Verify the current PR head and required checks before merge.
+- Prefer squash merge in collaborative repositories unless the project's workflow says otherwise. **Never infer merge authorization** from CI, reviews, or prior PRs.
+- Protect credentials, tokens, private keys, and local environment files; do not commit them or accidental generated/editor files.
+
+State unknown required checks or merge preferences rather than inventing them. Explicit project conventions always override these defaults.
 
 ## Process
 
@@ -76,13 +80,14 @@ When a PR is part of the repository workflow:
   branch; distinguish the PR's recorded base SHA from the current target tip;
 - verify acceptance criteria;
 - run relevant checks;
-- use `templates/PULL_REQUEST.md` when applicable;
+- use the project's PR template when available; otherwise include a short summary, observed checks, material decisions/limitations, and an issue reference when applicable;
 - link the implementation issue.
 
 Report checks only for the exact revision they evaluated. Do not reuse earlier
 results after the head changes; refresh the verification summary and PR
-description when needed. `skills/verify-change/SKILL.md` defines the evidence
-to record, including skipped or unavailable checks.
+description when needed. If `verify-change` is installed, use it for fuller
+evidence; otherwise report actual passed, failed, skipped and unavailable checks
+and the remaining risk directly. Do not assume a sibling skill is installed.
 
 ### 5. Merge
 

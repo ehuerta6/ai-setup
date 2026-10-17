@@ -77,7 +77,7 @@ Each criterion should describe an observable result, not an implementation step.
 
 Describe how the finished behavior can be demonstrated or tested.
 
-Use the project's existing test and validation strategy where possible.
+Use the project's existing test and validation strategy where possible. For interactive changes, specify observable user journeys, meaningful side effects, and negative or authorization cases when relevant; do not invent test infrastructure in the spec.
 
 ## Open questions
 

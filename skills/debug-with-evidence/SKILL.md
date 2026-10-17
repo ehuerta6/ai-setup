@@ -54,7 +54,7 @@ Inspect the relevant:
 - configuration;
 - recent changes.
 
-Redact secrets and credentials from captured output.
+Redact secrets and credentials from captured output. Prefer synthetic, anonymized, or otherwise authorized fixtures for reproducing production incidents; do not copy raw production records or credentials to local or cloud agents by default.
 
 ### 4. Form hypotheses
 
@@ -87,11 +87,11 @@ Once evidence supports a cause:
 
 ### 7. Verify
 
-Run the reproduction again.
+Run the original reproduction again in a controlled environment; when meaningful, drive the changed user journey using the project's verification skill or existing harness.
 
-It should now pass.
+The original failure should now pass, and any relevant state or external effect should match expectations.
 
-Then use `verify-change` for the relevant repository checks.
+Then use `verify-change` for the relevant repository checks when installed; otherwise discover and run the project's applicable checks directly, distinguishing observed passes from failures and unavailable verification.
 
 ## Rules
 

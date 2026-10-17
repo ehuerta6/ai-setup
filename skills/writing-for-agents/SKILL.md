@@ -17,9 +17,9 @@ Keep always-loaded context small and move conditional detail behind clear pointe
 
 Keep each rule or workflow authoritative in one place.
 
-Reference it elsewhere instead of copying it.
+Reference the canonical source where it is accessible. For separately installed skills, embed the **smallest task-critical operational subset** needed to work when the repository or sibling files cannot be read. The canonical rule remains the maintenance source.
 
-Duplication creates drift and gives repeated instructions accidental extra weight.
+Unnecessary copy/paste creates drift and gives repeated instructions accidental extra weight; avoid repeating full rule files in every skill.
 
 ### Context pointers
 
@@ -148,7 +148,7 @@ Delete instructions that no longer earn their context cost.
 - Global rules should be broadly reusable.
 - Prefer precise triggers over broad descriptions.
 - Do not hide critical requirements behind weak optional wording.
-- Do not repeat the same instruction across skills and rules.
+- Avoid redundant instructions across skills and rules; allow a concise, intentionally maintained subset needed for standalone skill execution.
 
 ## Completion
 

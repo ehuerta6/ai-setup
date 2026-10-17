@@ -67,6 +67,8 @@ Introduce a new abstraction only when it removes real complexity or represents a
 
 Do not redesign adjacent systems while implementing a focused task.
 
+For meaningful changes, challenge incidental complexity: can the same behavior be expressed by deleting branches, unnecessary modes, indirection, or redundant layers? Watch for conditionals scattered across unrelated paths, feature logic in shared modules, unclear type boundaries, and non-atomic updates. Favor a clear structural correction when supported by a concrete maintenance or correctness gain; do not force abstraction or refactoring based on style or file length alone.
+
 ## State and behavior
 
 Represent meaningful product state explicitly.
