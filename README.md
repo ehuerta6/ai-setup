@@ -95,6 +95,12 @@ Research a question and compare options using current, traceable evidence and ex
 
 ## Planning
 
+### `project-viability`
+
+Path: `skills/project-viability/SKILL.md`
+
+Decide whether a software project idea is worth building, needs a small real-world validation, or is better solved without new software. For personal, school, club, community, open-source, and commercial problems; separate from requirements discovery and technical design.
+
 ### `adversarial-discovery` (testing)
 
 Path: `skills/adversarial-discovery/SKILL.md`
