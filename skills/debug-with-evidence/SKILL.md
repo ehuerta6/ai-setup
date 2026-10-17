@@ -91,7 +91,7 @@ Run the original reproduction again in a controlled environment; when meaningful
 
 The original failure should now pass, and any relevant state or external effect should match expectations.
 
-Then use `verify-change` for the relevant repository checks.
+Then use `verify-change` for the relevant repository checks when installed; otherwise discover and run the project's applicable checks directly, distinguishing observed passes from failures and unavailable verification.
 
 ## Rules
 
