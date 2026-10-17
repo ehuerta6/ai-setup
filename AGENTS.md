@@ -31,6 +31,12 @@ Use `README.md` as the catalog for available configuration and `WORKFLOWS.md` to
 
 Load only the configuration relevant to the current task.
 
+## Skills-first delivery
+
+Maintain `ai-setup` as the canonical vault for rules, agents, templates, project instructions and skills. When a reusable improvement belongs to an existing repeatable workflow, prioritize updating its installable skill. Make the relevant skill self-contained enough to work after selective global installation without access to the rest of this repository. Embed only a concise task-relevant subset of canonical rules and boundaries; do not duplicate entire artifacts or erase their original ownership. Preserve the separate roles of agents, rules, templates and project instructions.
+
+The `npx skills` CLI distributes skill copies, not arbitrary rules, Codex agent definitions or Project Instructions. Never claim otherwise.
+
 ## Agents
 
 Use specialized agents from `agents/` when isolation improves review quality, context management, or teaching.
