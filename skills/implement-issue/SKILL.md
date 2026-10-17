@@ -85,7 +85,7 @@ Before considering implementation complete:
 - confirm no requirement was silently skipped;
 - confirm no unrequested behavior was added.
 
-Then use `verify-change`.
+Then use `verify-change` when installed. If it is unavailable, execute the repository's configured focused and required completion checks directly, inspect the final diff, and report precise results and gaps; never assume a sibling skill was installed.
 
 ### 6. Review the final diff
 
