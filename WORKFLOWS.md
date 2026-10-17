@@ -8,6 +8,7 @@ These routes are suggestions, not a required sequence. Use only the steps that h
 
 | If you're... | Go to |
 | --- | --- |
+| Unsure whether an idea is worth building | [Project viability](#project-viability) |
 | Starting with an idea | [Only an idea](#only-an-idea) |
 | Planning a product that has not started | [Product defined, project not started](#product-defined-project-not-started) |
 | Setting up AI in an empty repo | [Empty repo needs minimal AI setup](#empty-repo-needs-minimal-ai-setup) |
@@ -29,7 +30,13 @@ These routes are suggestions, not a required sequence. Use only the steps that h
 | Creating reusable AI configuration | [Need new AI configuration](#need-new-ai-configuration) |
 | Improving an existing workflow | [Workflow improvement](#workflow-improvement) |
 
+## Project viability
+
+Use `project-viability` when the open question is whether a real problem warrants new software at all. Compare the best build case against simpler solutions, and end with BUILD, VALIDATE FIRST, or DON'T BUILD. This precedes requirement discovery only when useful; it is not a required stage or an agent orchestration workflow. Complex independent debate belongs to `adversarial-discovery`.
+
 ## Only an idea
+
+If the value of building is still in doubt, start with [project viability](#project-viability). Otherwise go directly to discovery.
 
 Use `product-grill` when outcomes, users, scope, or product behavior need clarification and the user should not have to make technical design choices. Use `grill-me` when the user wants to resolve product and technical decisions together and is comfortable with those decisions.
 
