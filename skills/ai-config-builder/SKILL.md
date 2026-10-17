@@ -74,6 +74,20 @@ Choose:
 - Template — reusable artifact structure.
 - Project Instruction — long-lived behavior for a multi-chat project.
 
+## Skills-first distribution
+
+`ai-setup` remains the canonical vault for reusable skills, agents, rules, templates, and project instructions. Prefer updating a **relevant installable skill** when knowledge from another artifact should change how agents perform a task.
+
+- Keep canonical rules, templates, and agents in their own files; do not delete or reclassify them for CLI convenience.
+- Embed only the essential, task-relevant constraints, precedence, safety boundaries, and completion criteria into the corresponding skill so a globally installed copy can operate without a checkout of `ai-setup`.
+- Treat a skill as standalone: test the instruction path when sibling skills, rules, agents, or templates are inaccessible; provide a fallback or state the dependency honestly.
+- Preserve project-specific context in its own repository. Do not transfer secrets, credentials, or domain decisions into global skills.
+- Prefer extending an existing skill to creating another skill with an overlapping trigger. Create a new skill only for a distinct repeatable workflow.
+- Avoid copying complete rules or templates into every skill. The canonical file stays authoritative for maintenance, while a concise operational subset travels with the skill. Keep those subsets consistent when the canonical behavior changes.
+- Agents remain isolated roles, not disguised skills; project instructions and templates retain their own purposes. `npx skills` distributes skills, not these other artifact types.
+
+This is a packaging priority, not a requirement to expand the catalog or rewrite every artifact.
+
 ## Discovery
 
 Ask only the questions needed to define:
@@ -117,7 +131,7 @@ Use `writing-for-agents` when useful.
 
 ## Adoption
 
-Treat new configuration as experimental until actual usage and explicit user confirmation justify adoption. Do not infer acceptance or default status from catalog presence.
+Default new configuration to experimental until usage supports promotion, **unless the user explicitly directs immediate adoption**. Record explicit acceptance separately from execution or test evidence: adoption does not prove the configuration works. Do not infer acceptance from catalog presence.
 
 ## Return
 
