@@ -4,6 +4,8 @@ Scenario-based guide for using `ai-setup`.
 
 These routes are suggestions, not a required sequence. Use only the steps that help with the task. For a single reusable workflow, load its skill; for durable multi-chat context, start from a Project Instruction preset.
 
+A project may move from discovery to decisions, planning, GitHub Issues, implementation, verification, and pull requests as needed. `docs/` describes verified behavior; `knowledge/` preserves durable approved intent and context when useful. Retrospectives may improve later workflows. These are connected routes, not required stages for every change.
+
 ## Router
 
 | If you're... | Go to |
@@ -14,6 +16,7 @@ These routes are suggestions, not a required sequence. Use only the steps that h
 | Setting up AI in an empty repo | [Empty repo needs minimal AI setup](#empty-repo-needs-minimal-ai-setup) |
 | Adopting configuration into an existing project | [Existing project adoption](#existing-project-adoption) |
 | Reviewing configuration that's already in use | [Existing project maintenance](#existing-project-maintenance) |
+| Retrieving or reviewing durable project knowledge | [Project knowledge](#project-knowledge) |
 | Creating a multi-chat workspace | [New ChatGPT or Claude Project](#new-chatgpt-or-claude-project) |
 | Researching or comparing options | [Research and comparison](#research-and-comparison) |
 | Clarifying a feature | [Feature is still unclear](#feature-is-still-unclear) |
@@ -98,6 +101,13 @@ Before changing the project, present the proposed files and classify each as ADD
 For local Codex setups, first check whether relevant skills are already installed globally (see [Codex shared configuration](README.md#codex-shared-configuration)). Reuse global skills when suitable rather than copying them to every repository. Keep project-specific instructions and stack-specific configuration local when justified.
 
 Project-specific behavior and architecture take priority over reusable defaults.
+
+
+## Project knowledge
+
+Use `project-knowledge` when relevant durable context can inform a task, when an approved decision or verified lesson should be preserved, or when the user explicitly requests a Knowledge Review. Start with the repository's `knowledge/README.md` when it exists, then search only notes relevant to the current task. GitHub keeps issue and pull request history; knowledge notes link to that history rather than copying it. Do not create notes for routine changes.
+
+During an approved issue, retrieve relevant knowledge and capture only durable outcomes. During PR review, check relevant notes against the diff and offer a review if material contradictions emerge. For existing-project adoption, inspect local knowledge and instructions, then recommend `ADD`, `KEEP EXISTING`, `REPLACE`, or `SKIP`; do not add knowledge files or replace instructions unconditionally. Run a full Knowledge Review only on request. See [project-knowledge](skills/project-knowledge/SKILL.md).
 
 
 ## Existing project maintenance

@@ -27,6 +27,8 @@ Read:
 - relevant project instructions;
 - surrounding implementation where needed.
 
+When repository knowledge is relevant to the diff, inspect only the related notes and load `project-knowledge` when available. Check that notes distinguish approved intent from current behavior. Suggest an on-demand Knowledge Review if the diff reveals material possible staleness or contradiction; do not start a full review unless requested.
+
 Review the whole change, not isolated snippets.
 
 ### 2. Review requirements

@@ -38,6 +38,8 @@ Before editing:
 - identify configured validation commands;
 - inspect relevant schema, API, state, or UI boundaries.
 
+When `knowledge/README.md` exists and durable context could affect the issue, read its guide and retrieve only relevant notes. Load `project-knowledge` when available. Capture or update a note only when the work produces durable knowledge; a routine issue does not require one.
+
 Use the existing architecture unless the issue requires changing it.
 
 ### 3. Define the minimum change
