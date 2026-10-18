@@ -89,6 +89,12 @@ description when needed. If `verify-change` is installed, use it for fuller
 evidence; otherwise report actual passed, failed, skipped and unavailable checks
 and the remaining risk directly. Do not assume a sibling skill is installed.
 
+When using GitHub CLI during PR delivery:
+
+- `gh pr checks` exit 8 means some checks are pending, not that the checks failed or passed. Inspect individual results for the current head SHA instead of treating this exit as a command error.
+- Before building a `gh api --jq` filter, inspect the endpoint's actual JSON shape (for example, root type and relevant keys) with bounded output. Do not assume an object, array, or nesting structure, and avoid dumping large payloads unnecessarily.
+- Recheck asynchronous CI after a meaningful state change or a reasonable interval; use supported watch behavior only when a bounded wait is useful. Avoid repeatedly polling unchanged state. Report pending, skipped, or authorization-blocked checks as such rather than inferring success.
+
 ### 5. Merge
 
 Use the repository's configured merge strategy.
