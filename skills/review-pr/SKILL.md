@@ -91,7 +91,7 @@ Look for:
 - missing real user-path proof for a change that affects application behavior;
 - evidence that omits persistent side effects, permission boundaries, or failure states relevant to the change.
 
-For nontrivial cross-boundary or high-risk changes, also identify critical assumptions and plausible regression paths beyond the diff. Verify the most consequential ones against real code or tests when feasible, and report what could not be checked. Keep this focused; trivial PRs do not need an exhaustive audit.
+Calibrate depth to blast radius, criticality, integration boundaries, reversibility, persistence and data-integrity impact, security and authorization implications, plausible regressions, and available verification evidence. For high-consequence changes, examine critical assumptions and likely regression paths beyond the diff, verify the most consequential against real code or tests when feasible, and report gaps. Keep this focused; isolated, reversible changes do not need an exhaustive audit.
 
 ### 6. Report findings
 
