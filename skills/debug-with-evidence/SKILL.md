@@ -85,6 +85,8 @@ Once evidence supports a cause:
 - preserve behavior outside the bug;
 - add a regression test when practical.
 
+When a fix fails, use what it demonstrated to update the hypothesis ranking. If attempts repeatedly fail or evidence contradicts the working hypothesis, stop editing and reassess the reproduction, failure boundary, original diagnosis, and alternatives; gather discriminating evidence before another change. Follow a clear next step when new evidence already supports one.
+
 ### 7. Verify
 
 Run the original reproduction again in a controlled environment; when meaningful, drive the changed user journey using the project's verification skill or existing harness.
