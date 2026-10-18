@@ -17,6 +17,7 @@ A project may move from discovery to decisions, planning, GitHub Issues, impleme
 | Adopting configuration into an existing project | [Existing project adoption](#existing-project-adoption) |
 | Reviewing configuration that's already in use | [Existing project maintenance](#existing-project-maintenance) |
 | Retrieving or reviewing durable project knowledge | [Project knowledge](#project-knowledge) |
+| Creating, cleaning, or reviewing personal learning notes | [Personal learning notes](#personal-learning-notes) |
 | Creating a multi-chat workspace | [New ChatGPT or Claude Project](#new-chatgpt-or-claude-project) |
 | Researching or comparing options | [Research and comparison](#research-and-comparison) |
 | Clarifying a feature | [Feature is still unclear](#feature-is-still-unclear) |
@@ -108,6 +109,10 @@ Project-specific behavior and architecture take priority over reusable defaults.
 Use `project-knowledge` when relevant durable context can inform a task, when an approved decision or verified lesson should be preserved, or when the user explicitly requests a Knowledge Review. Start with the repository's `knowledge/README.md` when it exists, then search only notes relevant to the current task. GitHub keeps issue and pull request history; knowledge notes link to that history rather than copying it. Do not create notes for routine changes.
 
 During an approved issue, retrieve relevant knowledge and capture only durable outcomes. During PR review, check relevant notes against the diff and offer a review if material contradictions emerge. For existing-project adoption, inspect local knowledge and instructions, then recommend `ADD`, `KEEP EXISTING`, `REPLACE`, or `SKIP`; do not add knowledge files or replace instructions unconditionally. Run a full Knowledge Review only on request. See [project-knowledge](skills/project-knowledge/SKILL.md).
+
+## Personal learning notes
+
+Use [learning-notes](skills/learning-notes/SKILL.md) for requested work on personal study notes in an authorized local Markdown workspace, including notes opened in Obsidian. Use `project-knowledge` for durable project decisions and context. For teaching, practice, and learning progression, follow the relevant learning Project Instructions, such as [learning-coach](project-instructions/learning-coach.md).
 
 
 ## Existing project maintenance

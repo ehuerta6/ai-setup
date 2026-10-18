@@ -103,6 +103,14 @@ Path: `skills/research-and-compare/SKILL.md`
 
 Research a question and compare options using current, traceable evidence and explicit tradeoffs.
 
+## Learning and study
+
+### `learning-notes` (testing)
+
+Path: `skills/learning-notes/SKILL.md`
+
+Create, clean, review, and connect personal learning notes in local Markdown workspaces. It handles note files; `learning-coach` remains responsible for tutoring and learning progression.
+
 ## Planning
 
 ### `project-viability`
