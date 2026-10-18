@@ -42,6 +42,12 @@ Use project-provided commands instead of inventing replacements.
 
 Before running checks in parallel, identify shared generated files. Sequence checks when one creates, regenerates, or removes files another consumes; parallelize independent checks when safe.
 
+### Tool outcomes and bounded recovery
+
+Interpret a command's exit status using its output, purpose, and documented contract before classifying verification. For example, `rg` exit 1 means no matches (while exit 2 normally signals a search error); an `lsof` lookup may also return nonzero with no matches, but can fail for other reasons. An expected no-match is not a failing command, nor proof that an unrelated test passed.
+
+For an unexpected result, inspect stdout/stderr, arguments and help, the observed API response shape where relevant, and the resolved executable, version, environment, or runtime (including package-manager shims) before retrying. Make each retry test a changed hypothesis or wait for a meaningful asynchronous state change. Declare a small bounded recovery budget; stop when retries add no information or access is unavailable, and report the remaining gap. Keep useful exploratory probes, but do not mask genuine failures with blanket `|| true` or other silent fallbacks.
+
 ### 3. Run focused checks
 
 During iteration, prefer the smallest check that exercises the changed behavior.
