@@ -34,6 +34,8 @@ Inspect the actual project and classify relevant configuration as:
 
 Project-specific behavior takes priority over reusable defaults.
 
+When durable project memory may help, inspect existing knowledge files and instruction pointers before recommending changes. Classify knowledge-related changes as `ADD`, `KEEP EXISTING`, `REPLACE`, or `SKIP`: add a concise `knowledge/README.md` and pointer only when useful and absent; keep compatible existing systems; recommend `REPLACE` when evidence supports it, but carry it out only after explicit user approval and preserve project-specific behavior; skip it when it adds no material value. Do not install `knowledge/` unconditionally or create empty directories. For Codex and Claude Code discovery, follow the project's existing instruction files and verify Claude's supported `AGENTS.md` behavior for its version/settings; add only a minimal adapter when needed.
+
 ### Build
 
 Use when creating or extending a skill, agent, rule, template, or Project Instruction.

@@ -55,6 +55,10 @@ Codex reads global instructions from `~/.codex/AGENTS.md` and repository-specifi
 
 Preserve existing global and project instructions when adding this guidance. Update the local `ai-setup` checkout separately with Git: `npx skills update -g` updates installed skills, **not** this checkout, TOML agent definitions, or rules. Local files and global installations may be unavailable in remote/cloud Codex environments; verify access there rather than assuming it.
 
+### Claude Code (discovery documented; not tested locally)
+
+Claude Code supports project skills in `.claude/skills/<skill-name>/SKILL.md` and personal skills in `~/.claude/skills/`. The canonical skills in this repository can be selectively installed with the [skills CLI](https://github.com/vercel-labs/skills), for example `npx skills add ehuerta6/ai-setup -g -a claude-code -s project-knowledge`. It reads project `CLAUDE.md` instructions. Claude Code v2.1.277 and later can also read `AGENTS.md`, depending on project-instruction settings; by default it reads `AGENTS.md` only when there is no `CLAUDE.md`, `.claude/CLAUDE.md`, or `CLAUDE.local.md` in the working directory or an ancestor. When both instruction files are needed, use an `@AGENTS.md` import in the loaded `CLAUDE.md`; a prose pointer alone does not guarantee that file is read. Check the installed behavior before relying on `AGENTS.md`, and preserve existing project instructions. See [Claude Code memory and project instructions](https://code.claude.com/docs/en/memory) and [Claude Code skills](https://code.claude.com/docs/en/skills). The CLI usage is documented, not tested locally.
+
 ## Choosing configuration
 
 Use the smallest artifact that fits the job:
@@ -80,6 +84,12 @@ The catalog also supports nontechnical work. Use [research-and-compare](skills/r
 Path: `skills/ai-config-builder/SKILL.md`
 
 Design or evolve skills, agents, rules, templates, and Project Instructions without unnecessary duplication.
+
+### `project-knowledge` (testing)
+
+Path: `skills/project-knowledge/SKILL.md`
+
+Retrieve, capture, reconcile, and review durable project knowledge without duplicating GitHub work history or official documentation.
 
 ### `project-audit`
 

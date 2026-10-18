@@ -25,6 +25,8 @@ Load applicable stable rules from `rules/`:
 - `ui.md` — UI and accessibility
 - `definition-of-done.md` — completion criteria
 
+When durable project context is relevant, consult [knowledge/README.md](knowledge/README.md) and load the `project-knowledge` skill. Search only for notes relevant to the current task.
+
 ## Skills
 
 Use `README.md` as the catalog for available configuration and `WORKFLOWS.md` to choose the appropriate workflow, including research and AI workspace setup.
