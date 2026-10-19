@@ -4,6 +4,22 @@ Reusable configuration for AI-assisted software engineering, with selected workf
 
 Browse this README to find configuration. Use [WORKFLOWS.md](WORKFLOWS.md) to choose a process for a specific task.
 
+## Developer Portal
+
+The read-only [Developer Portal](https://ehuerta6.github.io/ai-setup/) is the
+catalog and workflow guide. Initial deployment requires setting the repository's
+Pages source to **GitHub Actions** under **Settings → Pages → Build and deployment**.
+To run it locally:
+
+```sh
+cd portal
+npm ci
+npm run dev
+```
+
+The portal reads canonical Markdown from this repository when it builds. Run
+`npm run build` from `portal/` to create the production site.
+
 For Google Gemini products and Antigravity guidance that routes back to canonical `ai-setup` skills, see [gemini/README.md](gemini/README.md). This is an integration guide, not a second configuration catalog.
 
 Projects can adopt only what they need. Keep product behavior, architecture, and other project-specific decisions in the project repository.

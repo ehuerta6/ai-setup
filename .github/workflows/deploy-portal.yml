@@ -1,0 +1,72 @@
+name: Deploy Developer Portal
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "portal/**"
+      - "skills/**"
+      - "agents/**"
+      - "rules/**"
+      - "templates/**"
+      - "project-instructions/**"
+      - "WORKFLOWS.md"
+      - ".github/workflows/deploy-portal.yml"
+  pull_request:
+    paths:
+      - "portal/**"
+      - "skills/**"
+      - "agents/**"
+      - "rules/**"
+      - "templates/**"
+      - "project-instructions/**"
+      - "WORKFLOWS.md"
+      - ".github/workflows/deploy-portal.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('portal-pr-{0}', github.event.pull_request.number) || 'pages' }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: portal/package-lock.json
+      - name: Install dependencies
+        working-directory: portal
+        run: npm ci
+      - name: Build portal
+        working-directory: portal
+        run: npm run build
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: portal/dist
+
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
