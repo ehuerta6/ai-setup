@@ -63,6 +63,30 @@ function slugify(value: string) {
     .replace(/\s+/g, "-");
 }
 
+function headingText(value: string) {
+  return value
+    .replace(/`([^`]*)`/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/<[^>]+>/g, "")
+    .replace(/\\(.)/g, "$1");
+}
+
+function nodeText(node: React.ReactNode): string {
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(nodeText).join("");
+  if (isValidElement<{ children?: React.ReactNode }>(node))
+    return nodeText(node.props.children);
+  return "";
+}
+
+function extractHeadings(content: string) {
+  const markdown = content.replace(/```[\s\S]*?```/g, "");
+  return [...markdown.matchAll(/^##\s+(.+)$/gm)].map((match) => {
+    const title = match[1].trim();
+    return { title, id: slugify(headingText(title)) };
+  });
+}
+
 function githubUrl(path: string) {
   return `${repository}/blob/main/${path}`;
 }
@@ -71,10 +95,12 @@ function Markdown({
   content,
   path,
   onOpen,
+  onOpenGuide,
 }: {
   content: string;
   path: string;
   onOpen: (item: CatalogItem) => void;
+  onOpenGuide: (path: "README.md" | "WORKFLOWS.md", hash: string) => void;
 }) {
   const linkBase = githubUrl(path);
   const preview = content
@@ -87,17 +113,17 @@ function Markdown({
           remarkPlugins={[remarkGfm]}
           components={{
             h1: ({ children, ...props }) => (
-              <h1 id={slugify(String(children))} {...props}>
+              <h1 id={slugify(nodeText(children))} {...props}>
                 {children}
               </h1>
             ),
             h2: ({ children, ...props }) => (
-              <h2 id={slugify(String(children))} {...props}>
+              <h2 id={slugify(nodeText(children))} {...props}>
                 {children}
               </h2>
             ),
             h3: ({ children, ...props }) => (
-              <h3 id={slugify(String(children))} {...props}>
+              <h3 id={slugify(nodeText(children))} {...props}>
                 {children}
               </h3>
             ),
@@ -121,6 +147,23 @@ function Markdown({
                 linkedPath &&
                 catalog.find(
                   (item) => item.path === decodeURIComponent(linkedPath),
+                );
+              const guidePath =
+                linkedPath === "README.md" || linkedPath === "WORKFLOWS.md"
+                  ? linkedPath
+                  : null;
+              if (guidePath && guidePath !== path)
+                return (
+                  <a
+                    href={`#${new URL(destination).hash.slice(1)}`}
+                    {...props}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      onOpenGuide(guidePath, new URL(destination).hash.slice(1));
+                    }}
+                  >
+                    {children}
+                  </a>
                 );
               if (linkedPath === path && new URL(destination).hash) {
                 return (
@@ -192,6 +235,115 @@ function Markdown({
   );
 }
 
+function MarkdownDocument({
+  content,
+  path,
+  onOpen,
+  onOpenGuide,
+}: {
+  content: string;
+  path: string;
+  onOpen: (item: CatalogItem) => void;
+  onOpenGuide: (path: "README.md" | "WORKFLOWS.md", hash: string) => void;
+}) {
+  const headings = useMemo(() => extractHeadings(content), [content]);
+  const articleRef = useRef<HTMLElement>(null);
+  const [activeHeading, setActiveHeading] = useState(headings[0]?.id ?? "");
+
+  useEffect(() => {
+    const article = articleRef.current;
+    if (!article || !headings.length) return;
+    let observer: IntersectionObserver | undefined;
+    const observeHeadings = () => {
+      observer?.disconnect();
+      observer = new IntersectionObserver(
+        (entries) => {
+          const visible = entries
+            .filter((entry) => entry.isIntersecting)
+            .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+          if (visible[0]) setActiveHeading(visible[0].target.id);
+        },
+        { rootMargin: "0px 0px -78% 0px", threshold: 0 },
+      );
+      article
+        .querySelectorAll("h2[id]")
+        .forEach((heading) => observer?.observe(heading));
+    };
+    observeHeadings();
+    const mutations = new MutationObserver(observeHeadings);
+    mutations.observe(article, { childList: true, subtree: true });
+    return () => {
+      mutations.disconnect();
+      observer?.disconnect();
+    };
+  }, [content, headings]);
+
+  useEffect(() => {
+    function restoreAnchor() {
+      const id = decodeURIComponent(window.location.hash.slice(1));
+      if (!id) return;
+      setActiveHeading(id);
+      document.getElementById(id)?.scrollIntoView({
+        behavior: "instant",
+        block: "start",
+      });
+    }
+    window.addEventListener("popstate", restoreAnchor);
+    return () => window.removeEventListener("popstate", restoreAnchor);
+  }, []);
+
+  const links = (
+    <nav aria-label="Document sections">
+      {headings.map((heading) => (
+        <a
+          key={heading.id}
+          href={`#${heading.id}`}
+          aria-current={activeHeading === heading.id ? "location" : undefined}
+          onClick={(event) => {
+            event.preventDefault();
+            setActiveHeading(heading.id);
+            if (window.location.hash !== `#${heading.id}`)
+              window.history.pushState(null, "", `#${heading.id}`);
+            document.getElementById(heading.id)?.scrollIntoView({
+              behavior: "instant",
+              block: "start",
+            });
+          }}
+        >
+          {heading.title}
+        </a>
+      ))}
+    </nav>
+  );
+
+  return (
+    <div className="document-layout">
+      <article className="document-article" ref={articleRef}>
+        <Markdown
+          content={content}
+          path={path}
+          onOpen={onOpen}
+          onOpenGuide={onOpenGuide}
+        />
+      </article>
+      {headings.length > 0 && (
+        <>
+          <aside className="document-toc" aria-label="On this page">
+            <p>On this page</p>
+            {links}
+          </aside>
+          <details className="document-toc-mobile">
+            <summary>
+              On this page <span>{headings.length} sections</span>
+            </summary>
+            {links}
+          </details>
+        </>
+      )}
+    </div>
+  );
+}
+
 function App() {
   const [view, setView] = useState<View>("overview");
   const [selected, setSelected] = useState<CatalogItem | null>(null);
@@ -208,6 +360,7 @@ function App() {
   const mobileMenuButton = useRef<HTMLButtonElement>(null);
   const mobileSidebar = useRef<HTMLElement>(null);
   const mainContent = useRef<HTMLElement>(null);
+  const pendingGuideAnchor = useRef("");
 
   const currentCatalogView = categories.includes(view as CategoryId);
   const filtered = useMemo(() => {
@@ -255,6 +408,23 @@ function App() {
     window.addEventListener("keydown", handleShortcut);
     return () => window.removeEventListener("keydown", handleShortcut);
   }, [currentCatalogView, mobileNavOpen]);
+
+  useEffect(() => {
+    function restoreGuide(event: PopStateEvent) {
+      const previousView = (event.state as { portalView?: View } | null)
+        ?.portalView;
+      if (previousView !== "readme" && previousView !== "workflows") return;
+      selectionRequest.current += 1;
+      setView(previousView);
+      setSelected(null);
+      setSelectedContent(null);
+      setContentError("");
+      setQuery("");
+      setMobileNavOpen(false);
+    }
+    window.addEventListener("popstate", restoreGuide);
+    return () => window.removeEventListener("popstate", restoreGuide);
+  }, []);
 
   useEffect(() => {
     const main = mainContent.current;
@@ -359,7 +529,31 @@ function App() {
     };
   }, [view]);
 
+  useEffect(() => {
+    const content =
+      view === "readme"
+        ? readmeContent
+        : view === "workflows"
+          ? workflowsContent
+          : null;
+    if (!content || !pendingGuideAnchor.current) return;
+    const anchor = pendingGuideAnchor.current;
+    pendingGuideAnchor.current = "";
+    requestAnimationFrame(() => {
+      document.getElementById(decodeURIComponent(anchor))?.scrollIntoView({
+        behavior: "instant",
+        block: "start",
+      });
+    });
+  }, [readmeContent, view, workflowsContent]);
+
   function navigate(next: View) {
+    if (window.location.hash)
+      window.history.replaceState(
+        window.history.state,
+        "",
+        `${window.location.pathname}${window.location.search}`,
+      );
     selectionRequest.current += 1;
     setView(next);
     setSelected(null);
@@ -370,6 +564,22 @@ function App() {
     setMobileNavOpen(false);
     if (mobileNavOpen) mobileMenuButton.current?.focus();
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function openGuide(path: "README.md" | "WORKFLOWS.md", hash: string) {
+    window.history.replaceState(
+      { ...(window.history.state ?? {}), portalView: view },
+      "",
+      `${window.location.pathname}${window.location.search}${window.location.hash}`,
+    );
+    pendingGuideAnchor.current = hash;
+    const nextView = path === "README.md" ? "readme" : "workflows";
+    navigate(nextView);
+    window.history.pushState(
+      { portalView: nextView },
+      "",
+      hash ? `#${hash}` : window.location.pathname + window.location.search,
+    );
   }
 
   async function openItem(item: CatalogItem) {
@@ -564,6 +774,7 @@ function App() {
             content={workflowsContent}
             error={workflowsError}
             onOpen={openItem}
+            onOpenGuide={openGuide}
           />
         )}
         {view === "readme" && !selected && (
@@ -571,6 +782,7 @@ function App() {
             content={readmeContent}
             error={readmeError}
             onOpen={openItem}
+            onOpenGuide={openGuide}
           />
         )}
         {currentCatalogView && (
@@ -583,6 +795,7 @@ function App() {
             selectedContent={selectedContent}
             contentError={contentError}
             onOpen={openItem}
+            onOpenGuide={openGuide}
             onBack={() => setSelected(null)}
             onCopy={copyMarkdown}
             copyMessage={copyMessage}
@@ -751,6 +964,7 @@ function CatalogPage({
   selectedContent,
   contentError,
   onOpen,
+  onOpenGuide,
   onBack,
   onCopy,
   copyMessage,
@@ -763,6 +977,7 @@ function CatalogPage({
   selectedContent: string | null;
   contentError: string;
   onOpen: (item: CatalogItem) => void;
+  onOpenGuide: (path: "README.md" | "WORKFLOWS.md", hash: string) => void;
   onBack: () => void;
   onCopy: (item: CatalogItem) => void;
   copyMessage: string;
@@ -827,10 +1042,11 @@ function CatalogPage({
         </div>
         <div className="reading-content">
           {selectedContent ? (
-            <Markdown
+            <MarkdownDocument
               content={selectedContent}
               path={selected.path}
               onOpen={onOpen}
+              onOpenGuide={onOpenGuide}
             />
           ) : contentError ? (
             <div className="content-state" role="alert">
@@ -935,18 +1151,13 @@ function WorkflowPage({
   content,
   error,
   onOpen,
+  onOpenGuide,
 }: {
   content: string | null;
   error: string;
   onOpen: (item: CatalogItem) => void;
+  onOpenGuide: (path: "README.md" | "WORKFLOWS.md", hash: string) => void;
 }) {
-  const headings = [...(content ?? "").matchAll(/^(#{2,3})\s+(.+)$/gm)].map(
-    (match) => ({
-      level: match[1].length,
-      title: match[2].trim(),
-      id: slugify(match[2]),
-    }),
-  );
   return (
     <div className="page-wrap workflow-page">
       <div className="eyebrow">
@@ -969,41 +1180,32 @@ function WorkflowPage({
           <Github size={15} /> View source <ArrowRight size={13} />
         </a>
       </div>
-      <div className="workflow-layout">
-        <aside className="workflow-outline" aria-label="Workflow sections">
-          <div className="outline-heading">ON THIS PAGE</div>
-          {headings.map((heading) => (
+      <div className="workflow-content">
+        {content ? (
+          <MarkdownDocument
+            content={content}
+            path="WORKFLOWS.md"
+            onOpen={onOpen}
+            onOpenGuide={onOpenGuide}
+          />
+        ) : error ? (
+          <div className="content-state" role="alert">
+            <CircleHelp size={18} />
+            <p>{error}</p>
             <a
-              className={heading.level === 3 ? "outline-subitem" : ""}
-              key={heading.id}
-              href={`#${heading.id}`}
+              href={githubUrl("WORKFLOWS.md")}
+              target="_blank"
+              rel="noreferrer"
             >
-              {heading.title}
+              View on GitHub
             </a>
-          ))}
-        </aside>
-        <div className="workflow-content">
-          {content ? (
-            <Markdown content={content} path="WORKFLOWS.md" onOpen={onOpen} />
-          ) : error ? (
-            <div className="content-state" role="alert">
-              <CircleHelp size={18} />
-              <p>{error}</p>
-              <a
-                href={githubUrl("WORKFLOWS.md")}
-                target="_blank"
-                rel="noreferrer"
-              >
-                View on GitHub
-              </a>
-            </div>
-          ) : (
-            <div className="content-state" role="status">
-              <span className="loading-indicator" />
-              <p>Loading workflow guide…</p>
-            </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="content-state" role="status">
+            <span className="loading-indicator" />
+            <p>Loading workflow guide…</p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1013,10 +1215,12 @@ function ReadmePage({
   content,
   error,
   onOpen,
+  onOpenGuide,
 }: {
   content: string | null;
   error: string;
   onOpen: (item: CatalogItem) => void;
+  onOpenGuide: (path: "README.md" | "WORKFLOWS.md", hash: string) => void;
 }) {
   return (
     <div className="page-wrap reading-page guide-page">
@@ -1037,7 +1241,12 @@ function ReadmePage({
       </div>
       <div className="reading-content">
         {content ? (
-          <Markdown content={content} path="README.md" onOpen={onOpen} />
+          <MarkdownDocument
+            content={content}
+            path="README.md"
+            onOpen={onOpen}
+            onOpenGuide={onOpenGuide}
+          />
         ) : error ? (
           <div className="content-state" role="alert">
             <CircleHelp size={18} />

@@ -134,11 +134,9 @@ Use [learning-notes](skills/learning-notes/SKILL.md) for requested work on perso
 
 Use when a project already has AI configuration and it may have drifted.
 
-Flow:
+**Flow:** [project-audit](skills/project-audit/SKILL.md)
 
-project-audit
-
-Audit for:
+**Audit for:**
 
 - stale configuration;
 - duplication;
