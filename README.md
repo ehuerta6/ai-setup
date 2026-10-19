@@ -79,6 +79,25 @@ Claude Code supports project skills in `.claude/skills/<skill-name>/SKILL.md` an
 
 Use the smallest artifact that fits the job:
 
+The map below summarizes what each artifact owns and how the repository helps you find and choose it. It is a guide to the catalog, not a requirement to adopt every artifact. Project-specific decisions take precedence over reusable configuration.
+
+```mermaid
+flowchart LR
+  project["Project-specific decisions"] -->|take precedence over| artifacts
+  readme["README.md<br/>catalog"] -->|helps find| artifacts
+  workflows["WORKFLOWS.md<br/>scenario router"] -->|routes work to| route["A useful process"]
+
+  subgraph artifacts["Reusable configuration — adopt what fits"]
+    skills["Skills<br/>repeatable workflows"]
+    agents["Agents<br/>focused roles"]
+    rules["Rules<br/>stable guidance"]
+    templates["Templates<br/>artifact starting points"]
+    instructions["Project Instructions<br/>workspace context"]
+  end
+```
+
+The repository's catalog and workflow guide describe the available choices; they do not prescribe a bundle or mandatory sequence.
+
 | Artifact | Use it for |
 | --- | --- |
 | Skill | A repeatable task workflow, such as [research-and-compare](skills/research-and-compare/SKILL.md). |

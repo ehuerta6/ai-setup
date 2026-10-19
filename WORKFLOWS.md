@@ -8,6 +8,21 @@ A project may move from discovery to decisions, planning, GitHub Issues, impleme
 
 ## Router
 
+Choose the route that matches the work in front of you. These are independent entry points; the diagram does not prescribe a lifecycle or require moving through every route. The detailed guidance below remains the source of truth if Mermaid is unavailable.
+
+```mermaid
+flowchart TD
+  need{"What do you need now?"}
+  need -->|Assess an idea| viability["Project viability"]
+  need -->|Start a defined product| product["Product defined, project not started"]
+  need -->|Implement an approved issue| implement["One approved issue"]
+  need -->|Debug a bug| debug["Bug"]
+  need -->|Adopt AI setup| adoption["Existing project adoption"]
+  need -->|Review existing setup| maintenance["Existing project maintenance"]
+```
+
+Use the matching section below for the complete steps, links, and boundaries. None of the branches requires the others.
+
 | If you're... | Go to |
 | --- | --- |
 | Unsure whether an idea is worth building | [Project viability](#project-viability) |
