@@ -10,6 +10,7 @@ on:
       - "rules/**"
       - "templates/**"
       - "project-instructions/**"
+      - "README.md"
       - "WORKFLOWS.md"
       - ".github/workflows/deploy-portal.yml"
   pull_request:
@@ -20,6 +21,7 @@ on:
       - "rules/**"
       - "templates/**"
       - "project-instructions/**"
+      - "README.md"
       - "WORKFLOWS.md"
       - ".github/workflows/deploy-portal.yml"
   workflow_dispatch:

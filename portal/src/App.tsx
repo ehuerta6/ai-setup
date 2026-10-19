@@ -1,7 +1,15 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Children,
+  isValidElement,
+  lazy,
+  Suspense,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import remarkGfm from "remark-gfm";
 import {
-  ArrowDown,
   ArrowLeft,
   ArrowRight,
   BookOpen,
@@ -27,13 +35,14 @@ import {
   categoryCounts,
   categoryTitles,
   describeMarkdown,
+  loadGuide,
   loadMarkdown,
-  loadWorkflows,
   type CatalogItem,
   type CategoryId,
 } from "./content";
+import MermaidDiagram from "./MermaidDiagram";
 
-type View = "overview" | "workflows" | CategoryId;
+type View = "overview" | "readme" | "workflows" | CategoryId;
 
 const repository = "https://github.com/ehuerta6/ai-setup";
 const ReactMarkdown = lazy(() => import("react-markdown"));
@@ -113,6 +122,13 @@ function Markdown({
                 catalog.find(
                   (item) => item.path === decodeURIComponent(linkedPath),
                 );
+              if (linkedPath === path && new URL(destination).hash) {
+                return (
+                  <a href={new URL(destination).hash} {...props}>
+                    {children}
+                  </a>
+                );
+              }
               if (linkedItem)
                 return (
                   <a
@@ -142,7 +158,31 @@ function Markdown({
                 <table>{children}</table>
               </div>
             ),
-            pre: ({ children }) => <pre className="code-block">{children}</pre>,
+            pre: ({ children }) => {
+              const child = Children.only(children);
+              if (
+                isValidElement<{
+                  className?: string;
+                  children?: React.ReactNode;
+                }>(child) &&
+                child.props.className?.split(" ").includes("language-mermaid")
+              ) {
+                return (
+                  <MermaidDiagram
+                    source={String(child.props.children ?? "").replace(
+                      /\n$/,
+                      "",
+                    )}
+                    label={
+                      path === "README.md"
+                        ? "Repository responsibilities and relationships"
+                        : "Workflow selection"
+                    }
+                  />
+                );
+              }
+              return <pre className="code-block">{children}</pre>;
+            },
           }}
         >
           {preview}
@@ -162,6 +202,8 @@ function App() {
   const [contentError, setContentError] = useState("");
   const [workflowsContent, setWorkflowsContent] = useState<string | null>(null);
   const [workflowsError, setWorkflowsError] = useState("");
+  const [readmeContent, setReadmeContent] = useState<string | null>(null);
+  const [readmeError, setReadmeError] = useState("");
   const selectionRequest = useRef(0);
   const mobileMenuButton = useRef<HTMLButtonElement>(null);
   const mobileSidebar = useRef<HTMLElement>(null);
@@ -256,7 +298,7 @@ function App() {
 
   useEffect(() => {
     if (!mobileNavOpen) return;
-    const desktop = window.matchMedia("(min-width: 761px)");
+    const desktop = window.matchMedia("(min-width: 901px)");
     function closeOnDesktop(event: MediaQueryListEvent) {
       if (!event.matches) return;
       const closeButton = mobileSidebar.current?.querySelector(
@@ -282,7 +324,7 @@ function App() {
     let active = true;
     setWorkflowsContent(null);
     setWorkflowsError("");
-    loadWorkflows()
+    loadGuide("WORKFLOWS.md")
       .then((content) => {
         if (active) setWorkflowsContent(content);
       })
@@ -290,6 +332,26 @@ function App() {
         if (active)
           setWorkflowsError(
             "The workflow guide could not be loaded. Open its canonical source on GitHub.",
+          );
+      });
+    return () => {
+      active = false;
+    };
+  }, [view]);
+
+  useEffect(() => {
+    if (view !== "readme") return;
+    let active = true;
+    setReadmeContent(null);
+    setReadmeError("");
+    loadGuide("README.md")
+      .then((content) => {
+        if (active) setReadmeContent(content);
+      })
+      .catch(() => {
+        if (active)
+          setReadmeError(
+            "The repository guide could not be loaded. Open its canonical source on GitHub.",
           );
       });
     return () => {
@@ -345,10 +407,12 @@ function App() {
   const pageTitle =
     selected?.title ??
     (view === "overview"
-      ? "Your AI setup, in one place."
-      : view === "workflows"
-        ? "Workflows"
-        : categoryTitles[view as CategoryId]);
+      ? "Overview"
+      : view === "readme"
+        ? "Repository guide"
+        : view === "workflows"
+          ? "Workflows"
+          : categoryTitles[view as CategoryId]);
 
   return (
     <div className="app-shell">
@@ -388,7 +452,6 @@ function App() {
       >
         <div className="sidebar-brand">
           <Brand onClick={() => navigate("overview")} />
-          <span className="brand-version">PORTAL</span>
           <button
             className="mobile-drawer-close icon-button"
             aria-label="Close navigation"
@@ -426,6 +489,12 @@ function App() {
             onClick={() => navigate("overview")}
           />
           <NavButton
+            active={view === "readme"}
+            icon={<FileText size={17} />}
+            label="Repository guide"
+            onClick={() => navigate("readme")}
+          />
+          <NavButton
             active={view === "workflows"}
             icon={<Workflow size={17} />}
             label="Workflows"
@@ -458,9 +527,6 @@ function App() {
             <Github size={16} /> <span>Source on GitHub</span>
             <ArrowRight size={14} />
           </a>
-          <div className="sidebar-note">
-            <span className="status-dot" /> Read-only · built from the repo
-          </div>
         </div>
       </aside>
       {mobileNavOpen && (
@@ -492,13 +558,18 @@ function App() {
             <Github size={15} /> <span>GitHub</span>
           </a>
         </div>
-        {view === "overview" && !selected && (
-          <Overview onNavigate={navigate} onOpen={openItem} />
-        )}
+        {view === "overview" && !selected && <Overview onNavigate={navigate} />}
         {view === "workflows" && !selected && (
           <WorkflowPage
             content={workflowsContent}
             error={workflowsError}
+            onOpen={openItem}
+          />
+        )}
+        {view === "readme" && !selected && (
+          <ReadmePage
+            content={readmeContent}
+            error={readmeError}
             onOpen={openItem}
           />
         )}
@@ -565,180 +636,106 @@ function NavButton({
   );
 }
 
-function Overview({
-  onNavigate,
-  onOpen,
-}: {
-  onNavigate: (view: View) => void;
-  onOpen: (item: CatalogItem) => void;
-}) {
-  const featuredSkills = catalog
-    .filter((item) => item.category === "skills")
-    .slice(0, 3);
+function Overview({ onNavigate }: { onNavigate: (view: View) => void }) {
   const types = [
     {
       id: "skills" as const,
       label: "Skills",
       icon: Sparkles,
-      note: "Repeatable workflows and guidance",
+      note: "Repeatable workflows for focused tasks",
     },
     {
       id: "agents" as const,
       label: "Agents",
       icon: Boxes,
-      note: "Focused roles for delegated work",
+      note: "Focused roles for specialized work",
     },
     {
       id: "rules" as const,
       label: "Rules",
       icon: Layers3,
-      note: "Stable engineering boundaries",
+      note: "Stable constraints across tasks",
     },
     {
       id: "templates" as const,
       label: "Templates",
       icon: FileText,
-      note: "Starting points for common artifacts",
+      note: "Starting points for recurring artifacts",
     },
     {
       id: "project-instructions" as const,
       label: "Project instructions",
       icon: BookOpen,
-      note: "Durable workspace context",
+      note: "Context for long-running workspaces",
     },
   ];
   return (
     <div className="page-wrap overview-page">
-      <section className="hero-section">
-        <div className="eyebrow">
-          <span className="eyebrow-line" /> REUSABLE ENGINEERING CONFIGURATION
-        </div>
-        <h1>
-          Good work starts
-          <br />
-          <span>with a better setup.</span>
-        </h1>
-        <p className="hero-description">
-          A field guide to the skills, rules, and workflows that make
-          AI-assisted engineering more thoughtful and consistent.
+      <section className="overview-intro">
+        <p className="eyebrow">AI-SETUP / CANONICAL CONFIGURATION</p>
+        <h1>A field guide to reusable engineering.</h1>
+        <p className="intro-description">
+          Browse focused workflows, project guidance, and reusable artifacts.
+          Each project adopts only what fits its needs.
         </p>
         <div className="hero-actions">
           <button
             className="primary-button"
             onClick={() => onNavigate("skills")}
           >
-            Explore the catalog <ArrowRight size={16} />
+            Browse the catalog <ArrowRight size={16} />
           </button>
           <button
             className="text-button"
             onClick={() => onNavigate("workflows")}
           >
-            Browse workflows <ArrowDown size={15} />
+            Choose a workflow <Workflow size={15} />
           </button>
-        </div>
-        <div className="hero-stats">
-          <div>
-            <strong>{catalog.length}</strong>
-            <span>artifacts</span>
-          </div>
-          <div className="stat-divider" />
-          <div>
-            <strong>5</strong>
-            <span>categories</span>
-          </div>
-          <div className="stat-divider" />
-          <div className="live-status">
-            <span className="status-dot" /> <span>Read-only view</span>
-          </div>
-        </div>
-        <div className="hero-grid-mark" aria-hidden="true">
-          <div className="grid-orbit orbit-one" />
-          <div className="grid-orbit orbit-two" />
-          <div className="orbit-core">
-            <Command size={28} />
-          </div>
-          <span className="orbit-label label-top">REUSE</span>
-          <span className="orbit-label label-right">REFINE</span>
-          <span className="orbit-label label-bottom">SHIP</span>
         </div>
       </section>
 
-      <section className="section-block">
+      <section className="overview-section">
         <div className="section-heading">
           <div>
-            <div className="eyebrow">THE BUILDING BLOCKS</div>
-            <h2>One source. Five ways to work.</h2>
+            <p className="eyebrow">THE CATALOG</p>
+            <h2>Find the right kind of guidance.</h2>
           </div>
-          <button className="quiet-link" onClick={() => onNavigate("skills")}>
-            View all <ArrowRight size={14} />
-          </button>
         </div>
-        <div className="type-grid">
-          {types.map(({ id, label, icon: Icon, note }, index) => (
+        <div className="category-list">
+          {types.map(({ id, label, icon: Icon, note }) => (
             <button
-              className="type-card"
+              className="category-row"
               key={id}
               onClick={() => onNavigate(id)}
             >
-              <span className={`type-icon icon-tone-${index}`}>
-                <Icon size={18} />
+              <Icon size={18} aria-hidden="true" />
+              <span className="category-copy">
+                <strong>{label}</strong>
+                <span>{note}</span>
               </span>
-              <span className="type-title">{label}</span>
-              <span className="type-note">{note}</span>
-              <span className="type-count">
-                {String(categoryCounts[id]).padStart(2, "0")}{" "}
-                <ChevronRight size={14} />
-              </span>
+              <span className="category-count">{categoryCounts[id]}</span>
+              <ChevronRight size={16} aria-hidden="true" />
             </button>
           ))}
         </div>
       </section>
 
-      <section className="section-block featured-block">
-        <div className="section-heading">
-          <div>
-            <div className="eyebrow">START HERE</div>
-            <h2>Popular starting points</h2>
-          </div>
-          <button className="quiet-link" onClick={() => onNavigate("skills")}>
-            All skills <ArrowRight size={14} />
-          </button>
-        </div>
-        <div className="featured-list">
-          {featuredSkills.map((item, index) => (
-            <button
-              className="featured-row"
-              key={item.id}
-              onClick={() => onOpen(item)}
-            >
-              <span className="featured-number">0{index + 1}</span>
-              <span className="featured-icon">
-                <Sparkles size={16} />
-              </span>
-              <span className="featured-copy">
-                <strong>{item.title}</strong>
-                <small>{item.description}</small>
-              </span>
-              <ArrowRight size={16} className="featured-arrow" />
-            </button>
-          ))}
-        </div>
-      </section>
-      <section className="workflow-callout">
-        <div className="workflow-callout-icon">
-          <Workflow size={20} />
-        </div>
-        <div>
-          <div className="eyebrow">NOT A CHECKLIST</div>
-          <h3>Choose the workflow that fits the work.</h3>
-          <p>These routes are suggestions, not a mandatory sequence.</p>
-        </div>
-        <button
-          className="round-arrow"
-          aria-label="Browse workflows"
-          onClick={() => onNavigate("workflows")}
-        >
-          <ArrowRight size={17} />
+      <section className="guide-links" aria-label="Repository guides">
+        <button className="guide-link" onClick={() => onNavigate("readme")}>
+          <BookOpen size={18} aria-hidden="true" />
+          <span>
+            <strong>Repository guide</strong>
+            <small>How the canonical configuration fits together</small>
+          </span>
+          <ArrowRight size={16} aria-hidden="true" />
+        </button>
+        <button className="guide-link" onClick={() => onNavigate("workflows")}>
+          <Workflow size={18} aria-hidden="true" />
+          <span>
+            <strong>Workflow guide</strong>
+            <small>Choose a route for the work at hand</small>
+          </span>
+          <ArrowRight size={16} aria-hidden="true" />
         </button>
       </section>
     </div>
@@ -963,9 +960,14 @@ function WorkflowPage({
             not required stages.
           </p>
         </div>
-        <span className="workflow-heading-icon">
-          <Workflow size={26} />
-        </span>
+        <a
+          className="source-button"
+          href={githubUrl("WORKFLOWS.md")}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <Github size={15} /> View source <ArrowRight size={13} />
+        </a>
       </div>
       <div className="workflow-layout">
         <aside className="workflow-outline" aria-label="Workflow sections">
@@ -1002,6 +1004,54 @@ function WorkflowPage({
             </div>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ReadmePage({
+  content,
+  error,
+  onOpen,
+}: {
+  content: string | null;
+  error: string;
+  onOpen: (item: CatalogItem) => void;
+}) {
+  return (
+    <div className="page-wrap reading-page guide-page">
+      <div className="reading-heading">
+        <p className="eyebrow">REPOSITORY GUIDE</p>
+        <h1>How this repository fits together.</h1>
+        <p>Read the canonical README as it is maintained in the repository.</p>
+        <div className="reading-actions">
+          <a
+            className="source-button"
+            href={githubUrl("README.md")}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <Github size={15} /> View source <ArrowRight size={13} />
+          </a>
+        </div>
+      </div>
+      <div className="reading-content">
+        {content ? (
+          <Markdown content={content} path="README.md" onOpen={onOpen} />
+        ) : error ? (
+          <div className="content-state" role="alert">
+            <CircleHelp size={18} />
+            <p>{error}</p>
+            <a href={githubUrl("README.md")} target="_blank" rel="noreferrer">
+              View on GitHub
+            </a>
+          </div>
+        ) : (
+          <div className="content-state" role="status">
+            <span className="loading-indicator" />
+            <p>Loading repository guide…</p>
+          </div>
+        )}
       </div>
     </div>
   );
