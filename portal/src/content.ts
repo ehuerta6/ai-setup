@@ -22,9 +22,10 @@ const markdownFiles = import.meta.glob<string>(
   { query: "?raw", import: "default", eager: true },
 );
 
-const workflowsModule = import.meta.glob<RawModule>("../../WORKFLOWS.md", {
-  query: "?raw",
-});
+const guidesModule = import.meta.glob<RawModule>(
+  ["../../README.md", "../../WORKFLOWS.md"],
+  { query: "?raw" },
+);
 
 const categoryTitles: Record<CategoryId, string> = {
   skills: "Skills",
@@ -146,9 +147,9 @@ export async function loadMarkdown(item: CatalogItem) {
   return content;
 }
 
-export async function loadWorkflows() {
-  const file = Object.values(workflowsModule)[0];
-  if (!file) throw new Error("Could not load canonical file: WORKFLOWS.md");
+export async function loadGuide(path: "README.md" | "WORKFLOWS.md") {
+  const file = guidesModule[`../../${path}`];
+  if (!file) throw new Error(`Could not load canonical file: ${path}`);
   return (await file()).default;
 }
 
