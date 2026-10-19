@@ -1112,7 +1112,7 @@ kbd {
 
 .markdown-body {
   color: #b1b7c3;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.8;
   overflow-wrap: anywhere;
 }
@@ -1208,7 +1208,7 @@ kbd {
   color: #d0d4de;
   background: #0e1118;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.65;
   tab-size: 2;
 }
@@ -1221,7 +1221,7 @@ kbd {
 .markdown-body table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 10px;
+  font-size: 12px;
 }
 .markdown-body th,
 .markdown-body td {
@@ -1319,8 +1319,8 @@ kbd {
   .icon-button {
     display: grid;
     place-items: center;
-    width: 32px;
-    height: 32px;
+    width: 44px;
+    height: 44px;
     border: 0;
     border-radius: 6px;
     color: #b5bdca;
@@ -1331,6 +1331,17 @@ kbd {
   .icon-button:hover {
     color: #eee9f8;
     background: #1b1e27;
+  }
+  .search-trigger,
+  .nav-item {
+    height: 44px;
+  }
+  .search-field input {
+    font-size: 16px;
+  }
+  .search-field button {
+    min-width: 36px;
+    min-height: 36px;
   }
   .sidebar {
     z-index: 40;
@@ -1495,10 +1506,11 @@ kbd {
   }
   .workflow-outline a {
     flex: 0 0 auto;
-    padding: 6px 8px;
+    min-height: 40px;
+    padding: 0 11px;
     border: 1px solid #2a303b;
     border-radius: 5px;
-    font-size: 9px;
+    font-size: 11px;
     white-space: nowrap;
   }
   .workflow-outline a.outline-subitem {
@@ -1531,6 +1543,12 @@ kbd {
   }
   .catalog-card {
     min-height: 143px;
+  }
+  .catalog-card > strong {
+    font-size: 13px;
+  }
+  .card-description {
+    font-size: 11px;
   }
   .catalog-title-row p {
     max-width: 230px;
