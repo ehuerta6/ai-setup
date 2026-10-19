@@ -83,17 +83,9 @@ The map below summarizes what each artifact owns and how the repository helps yo
 
 ```mermaid
 flowchart LR
-  project["Project-specific decisions"] -->|take precedence over| artifacts
-  readme["README.md<br/>catalog"] -->|helps find| artifacts
-  workflows["WORKFLOWS.md<br/>scenario router"] -->|routes work to| route["A useful process"]
-
-  subgraph artifacts["Reusable configuration — adopt what fits"]
-    skills["Skills<br/>repeatable workflows"]
-    agents["Agents<br/>focused roles"]
-    rules["Rules<br/>stable guidance"]
-    templates["Templates<br/>artifact starting points"]
-    instructions["Project Instructions<br/>workspace context"]
-  end
+  project["Project-specific<br/>decisions"] -->|take precedence over| reusable
+  guides["README catalog<br/>WORKFLOWS router"] -->|help choose| reusable
+  reusable["Reusable configuration — adopt what fits<br/><br/>Skills · repeatable workflows<br/>Agents · focused roles<br/>Rules · stable guidance<br/>Templates · artifact starting points<br/>Project Instructions · workspace context"]
 ```
 
 The repository's catalog and workflow guide describe the available choices; they do not prescribe a bundle or mandatory sequence.
