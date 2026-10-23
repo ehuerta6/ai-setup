@@ -170,6 +170,8 @@ preset or project-base
 → remove irrelevant generic behavior
 → produce final Project Instructions
 
+Keep the complete paste-ready instructions within 8,000 characters, or a lower limit specified by the target platform. Use `ai-config-builder` to count the final text before delivery; the cap applies to every preset.
+
 Do not blindly paste the reusable preset as the final instructions.
 
 
