@@ -458,7 +458,7 @@ Path: `templates/BATCH.md`
 
 Persist an issue orchestration graph, execution waves, gates, and orchestrator prompt.
 
-## `AGENT_TASK`
+## `AGENT_TASK` (testing)
 
 Path: `templates/AGENT_TASK.md`
 
