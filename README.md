@@ -458,6 +458,19 @@ Path: `templates/BATCH.md`
 
 Persist an issue orchestration graph, execution waves, gates, and orchestrator prompt.
 
+## `AGENT_TASK` (testing)
+
+Path: `templates/AGENT_TASK.md`
+
+Optional, model-agnostic handoff for a one-time task given to a coding agent. Fill only the relevant sections. For a straightforward edit, Task and Done may be enough:
+
+```markdown
+Task: Update the debugging guide so repeated failed fixes trigger a reassessment.
+Done: Preserve the focused path for a reproduced bug; check the issue's scenarios.
+```
+
+For complex work, add relevant sources and material boundaries, then make the finish condition and evidence proportionate to the task. Link canonical issues and instructions rather than copying them. In a software-engineering ChatGPT Project, you may attach this file as a Project Source and use the tailored [software-engineering-project instructions](project-instructions/software-engineering-project.md). That upload is a manually maintained copy, not synced with GitHub. Codex does not automatically read ChatGPT Project Sources; ChatGPT uses the copy to draft the prompt passed to the coding agent.
+
 ## `DECISION`
 
 Path: `templates/DECISION.md`

@@ -101,6 +101,8 @@ Distinguish:
 
 Use `handoff` when another chat or agent needs concise continuation context.
 
+When a chat involves delegating to or reviewing a coding agent, use `templates/AGENT_TASK.md` as a flexible reference if it is available as a Project Source. Tailor the prompt to the current project, repository instructions, available skills, and task size; keep simple tasks simple and omit irrelevant sections. When reviewing an agent's completion report, distinguish its claims from evidence you independently checked. If repository or PR access is available and material, inspect the relevant diff and checks before claiming verification, then recommend the smallest actionable next step. If the template or access is unavailable, continue with the context provided and state material limits. Leave product and merge decisions to the user. Do not apply this guidance to unrelated chats.
+
 ## Scope
 
 Do not silently:
