@@ -102,6 +102,8 @@ You do not need to adopt the whole catalog. In an existing repository, inspect i
 
 The catalog also supports nontechnical work. Use [research-and-compare](skills/research-and-compare/SKILL.md) for a focused comparison, [learning-coach](project-instructions/learning-coach.md) for a multi-chat learning workspace, or [project-base](project-instructions/project-base.md) for personal planning that needs continuity across chats. Skills guide a task; Project Instructions hold durable workspace context. The project workspace, not this reusable catalog, should contain personal details and decisions.
 
+For a focused, practice-driven learning method across programming, mathematics, theory, and other subjects, use [TRACE](project-instructions/TRACE.md). TRACE is a general learning cycle; [learning-coach](project-instructions/learning-coach.md) remains the roadmap-driven preset for technical learning, implementation, debugging, and progression.
+
 # Skills
 
 ## Configuration
@@ -481,6 +483,12 @@ For technical resume review, tailoring, Resume Bank usage, recruiter signal, and
 Path: `project-instructions/learning-coach.md`
 
 For roadmap-driven technical learning with interactive teaching, implementation, debugging, retrieval practice, and mastery checks.
+
+## `TRACE` (testing)
+
+Path: `project-instructions/TRACE.md`
+
+For an adaptive five-stage learning cycle with Learn, Review, and Exam modes across subjects.
 
 ## `interview-prep`
 
