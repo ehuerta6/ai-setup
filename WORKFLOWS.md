@@ -155,9 +155,12 @@ Available presets include:
 
 - resume-reviews;
 - learning-coach;
+- TRACE;
 - interview-prep;
 - software-engineering-project;
 - course-companion.
+
+Use [TRACE](project-instructions/TRACE.md) for an adaptive five-stage cycle across subjects, with Learn, Review, and Exam modes. Use [learning-coach](project-instructions/learning-coach.md) when roadmap-driven technical progression, implementation, debugging, and multi-chat continuity are central.
 
 If no specialized preset fits, start from:
 
